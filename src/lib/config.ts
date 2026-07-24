@@ -21,4 +21,5 @@ export const GOOGLE_WEB_CLIENT_ID: string =
   '55460051377-uf8f5s2n6mvk0tv2ln5b87urfcm77fsg.apps.googleusercontent.com';
 
 export const GOOGLE_IOS_CLIENT_ID: string | undefined =
-  (globalThis as any).process?.env?.GOOGLE_IOS_CLIENT_ID ?? undefined;
+  (globalThis as any).process?.env?.GOOGLE_IOS_CLIENT_ID ??
+  '676063139932-f89fb6jheqtp1u9mi8fbv4i093po35qv.apps.googleusercontent.com';
