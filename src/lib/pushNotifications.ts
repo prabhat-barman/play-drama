@@ -1,6 +1,14 @@
 import {Platform, PermissionsAndroid} from 'react-native';
 import DeviceInfo from './deviceInfo';
-import messaging, {
+import {
+  getMessaging,
+  requestPermission,
+  getToken,
+  deleteToken,
+  onMessage,
+  onNotificationOpenedApp,
+  getInitialNotification,
+  AuthorizationStatus,
   FirebaseMessagingTypes,
 } from '@react-native-firebase/messaging';
 import notifee, {
@@ -106,10 +114,10 @@ function dispatchTap(payload: NotificationTapPayload): void {
  */
 export async function requestNotificationPermission(): Promise<boolean> {
   if (Platform.OS === 'ios') {
-    const status = await messaging().requestPermission();
+    const status = await requestPermission(getMessaging());
     return (
-      status === messaging.AuthorizationStatus.AUTHORIZED ||
-      status === messaging.AuthorizationStatus.PROVISIONAL
+      status === AuthorizationStatus.AUTHORIZED ||
+      status === AuthorizationStatus.PROVISIONAL
     );
   }
 
@@ -171,7 +179,7 @@ export async function registerDeviceForPush(
 
     // iOS needs an APNs token first, but @react-native-firebase/messaging
     // handles the handshake internally when we ask for `getToken`.
-    const fcmToken = await messaging().getToken();
+    const fcmToken = await getToken(getMessaging());
     if (!fcmToken) return null;
 
     const platform = currentPlatform();
@@ -206,7 +214,7 @@ export async function unregisterDeviceFromPush(
   authToken: string,
 ): Promise<void> {
   try {
-    const fcmToken = await messaging().getToken();
+    const fcmToken = await getToken(getMessaging());
     if (!fcmToken) return;
     await api.deviceTokens.unregister({token: authToken, deviceToken: fcmToken});
   } catch (err) {
@@ -216,7 +224,7 @@ export async function unregisterDeviceFromPush(
   } finally {
     // Force a fresh token on next sign-in for a different account.
     try {
-      await messaging().deleteToken();
+      await deleteToken(getMessaging());
     } catch {
       // ignore
     }
@@ -235,27 +243,31 @@ export async function unregisterDeviceFromPush(
 export function initPushHandlers(): () => void {
   const unsubs: Array<() => void> = [];
 
-  // Foreground: FCM won't display banners itself while the app is open.
-  // We forward the message to notifee so the user still sees a banner.
-  unsubs.push(
-    messaging().onMessage(async remote => {
-      await ensureChannel();
-      await notifee.displayNotification({
-        title: remote.notification?.title,
-        body: remote.notification?.body,
-        data: (remote.data ?? {}) as Record<string, string>,
-        android: {
-          channelId: CHANNEL_ID,
-          smallIcon: 'ic_launcher',
-          pressAction: {id: 'default'},
-        },
-        ios: {
-          sound: 'default',
-        },
-      });
-      emitMessageReceived();
-    }),
-  );
+  try {
+    // Foreground: FCM won't display banners itself while the app is open.
+    // We forward the message to notifee so the user still sees a banner.
+    unsubs.push(
+      onMessage(getMessaging(), async remote => {
+        await ensureChannel();
+        await notifee.displayNotification({
+          title: remote.notification?.title,
+          body: remote.notification?.body,
+          data: (remote.data ?? {}) as Record<string, string>,
+          android: {
+            channelId: CHANNEL_ID,
+            smallIcon: 'ic_launcher',
+            pressAction: {id: 'default'},
+          },
+          ios: {
+            sound: 'default',
+          },
+        });
+        emitMessageReceived();
+      }),
+    );
+  } catch (err) {
+    if (__DEV__) console.warn('[push] messaging().onMessage failed', err);
+  }
 
   // notifee foreground tap
   unsubs.push(
@@ -266,23 +278,29 @@ export function initPushHandlers(): () => void {
     }),
   );
 
-  // App opened by tapping a push while in background
-  unsubs.push(
-    messaging().onNotificationOpenedApp(remote => {
-      if (remote?.data) dispatchTap(toPayload(remote.data));
-    }),
-  );
+  try {
+    // App opened by tapping a push while in background
+    unsubs.push(
+      onNotificationOpenedApp(getMessaging(), remote => {
+        if (remote?.data) dispatchTap(toPayload(remote.data));
+      }),
+    );
+  } catch (err) {
+    if (__DEV__) console.warn('[push] messaging().onNotificationOpenedApp failed', err);
+  }
 
-  // App opened from killed state via a push. This is a one-shot promise,
-  // not a subscription, so we don't add to `unsubs`.
-  messaging()
-    .getInitialNotification()
-    .then(remote => {
-      if (remote?.data) dispatchTap(toPayload(remote.data));
-    })
-    .catch(() => {
-      // ignore
-    });
+  // App opened from killed state via a push.
+  try {
+    getInitialNotification(getMessaging())
+      .then(remote => {
+        if (remote?.data) dispatchTap(toPayload(remote.data));
+      })
+      .catch(() => {
+        // ignore
+      });
+  } catch (err) {
+    if (__DEV__) console.warn('[push] messaging().getInitialNotification failed', err);
+  }
 
   return () => {
     for (const u of unsubs) {

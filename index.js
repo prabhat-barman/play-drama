@@ -3,7 +3,10 @@
  */
 
 import { AppRegistry } from 'react-native';
-import messaging from '@react-native-firebase/messaging';
+import {
+  getMessaging,
+  setBackgroundMessageHandler,
+} from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import App from './App';
 import { name as appName } from './app.json';
@@ -21,33 +24,37 @@ import { name as appName } from './app.json';
 // itself and we don't need to do anything (this handler still fires for
 // data + notification hybrid messages, but calling `displayNotification`
 // again would show a duplicate — hence the guard below).
-messaging().setBackgroundMessageHandler(async remoteMessage => {
-  if (remoteMessage?.notification?.title) {
-    // OS already displayed it; nothing to do.
-    return;
-  }
-  try {
-    // Ensure channel exists on Android — no-op on iOS.
-    await notifee.createChannel({
-      id: 'cinestream-default',
-      name: 'General notifications',
-      importance: AndroidImportance.HIGH,
-      sound: 'default',
-    });
-    await notifee.displayNotification({
-      title: remoteMessage?.data?.title || 'CineStream',
-      body: remoteMessage?.data?.body || '',
-      data: remoteMessage?.data || {},
-      android: {
-        channelId: 'cinestream-default',
-        smallIcon: 'ic_launcher',
-        pressAction: { id: 'default' },
-      },
-      ios: { sound: 'default' },
-    });
-  } catch {
-    // The headless task can't crash the app — swallow all errors.
-  }
-});
+try {
+  setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
+    if (remoteMessage?.notification?.title) {
+      // OS already displayed it; nothing to do.
+      return;
+    }
+    try {
+      // Ensure channel exists on Android — no-op on iOS.
+      await notifee.createChannel({
+        id: 'cinestream-default',
+        name: 'General notifications',
+        importance: AndroidImportance.HIGH,
+        sound: 'default',
+      });
+      await notifee.displayNotification({
+        title: remoteMessage?.data?.title || 'CineStream',
+        body: remoteMessage?.data?.body || '',
+        data: remoteMessage?.data || {},
+        android: {
+          channelId: 'cinestream-default',
+          smallIcon: 'ic_launcher',
+          pressAction: { id: 'default' },
+        },
+        ios: { sound: 'default' },
+      });
+    } catch {
+      // The headless task can't crash the app — swallow all errors.
+    }
+  });
+} catch {
+  // Firebase not initialized yet or not supported on this platform launch
+}
 
 AppRegistry.registerComponent(appName, () => App);
