@@ -26,25 +26,15 @@ function ensureGoogleConfigured() {
     return;
   }
   const webMissing = isPlaceholder(GOOGLE_WEB_CLIENT_ID);
-  const iosMissing = isPlaceholder(GOOGLE_IOS_CLIENT_ID);
 
-  if (Platform.OS === 'ios' && iosMissing) {
+  if (webMissing) {
     throw new Error(
-      "Google Sign-In isn't configured for iOS yet. Add your iOS OAuth " +
-        'Client ID to src/lib/config.ts (GOOGLE_IOS_CLIENT_ID) and the ' +
-        'iOS URL scheme to ios/CineStream/Info.plist, then rebuild.',
-    );
-  }
-  if (Platform.OS === 'android' && webMissing) {
-    throw new Error(
-      "Google Sign-In isn't configured for Android yet. Add your Web " +
-        'OAuth Client ID to src/lib/config.ts (GOOGLE_WEB_CLIENT_ID) and ' +
-        'register your Android app (package + SHA-1) in Google Console.',
+      "Google Sign-In isn't configured yet. Add your Web OAuth Client ID to src/lib/config.ts (GOOGLE_WEB_CLIENT_ID).",
     );
   }
   GoogleSignin.configure({
-    webClientId: webMissing ? undefined : GOOGLE_WEB_CLIENT_ID,
-    iosClientId: iosMissing ? undefined : GOOGLE_IOS_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    iosClientId: isPlaceholder(GOOGLE_IOS_CLIENT_ID) ? undefined : GOOGLE_IOS_CLIENT_ID,
     offlineAccess: false,
     forceCodeForRefreshToken: false,
   });
@@ -79,9 +69,10 @@ function decodeJwtPayloadUnsafe(jwt: string): Record<string, unknown> | null {
       b64 += '='.repeat(4 - pad);
     }
     // React Native has `global.atob` on Hermes; fall back to Buffer if not.
+    const atobFn = (globalThis as any).atob;
     const decoded =
-      typeof atob === 'function'
-        ? atob(b64)
+      typeof atobFn === 'function'
+        ? atobFn(b64)
         : // @ts-ignore — Buffer is available in RN
           Buffer.from(b64, 'base64').toString('binary');
     // atob returns a binary string; JSON is ASCII so this is fine.
