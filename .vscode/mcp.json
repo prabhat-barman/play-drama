@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "Figma": {
+      "url": "https://mcp.figma.com/mcp"
+    },
+    "Google Gemini": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@google/gemini-mcp-server@latest",
+        "--api-key",
+        "${env:GEMINI_API_KEY}",
+        "--project-id",
+        "cinestream-1464c"
+      ]
+    }
+  }
+}

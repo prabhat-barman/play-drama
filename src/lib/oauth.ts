@@ -64,6 +64,58 @@ export type GoogleIdTokenResult = {
   name?: string;
 };
 
+// Decodes a JWT payload WITHOUT verifying the signature — purely for
+// diagnostic logging so we can see what `aud` / `exp` claims the token
+// carries before it hits our backend. Do NOT use for trust decisions.
+function decodeJwtPayloadUnsafe(jwt: string): Record<string, unknown> | null {
+  try {
+    const parts = jwt.split('.');
+    if (parts.length < 2) {
+      return null;
+    }
+    let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const pad = b64.length % 4;
+    if (pad) {
+      b64 += '='.repeat(4 - pad);
+    }
+    // React Native has `global.atob` on Hermes; fall back to Buffer if not.
+    const decoded =
+      typeof atob === 'function'
+        ? atob(b64)
+        : // @ts-ignore — Buffer is available in RN
+          Buffer.from(b64, 'base64').toString('binary');
+    // atob returns a binary string; JSON is ASCII so this is fine.
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
+function logGoogleIdTokenClaims(idToken: string): void {
+  const claims = decodeJwtPayloadUnsafe(idToken);
+  if (!claims) {
+    console.log('[oauth] google idToken: could not decode payload');
+    return;
+  }
+  const nowSec = Math.floor(Date.now() / 1000);
+  const exp = typeof claims.exp === 'number' ? claims.exp : null;
+  const iat = typeof claims.iat === 'number' ? claims.iat : null;
+  const secondsUntilExpiry = exp !== null ? exp - nowSec : null;
+  console.log('[oauth] google idToken claims', {
+    aud: claims.aud,
+    azp: claims.azp,
+    iss: claims.iss,
+    email: claims.email,
+    email_verified: claims.email_verified,
+    iat,
+    exp,
+    now: nowSec,
+    ageSeconds: iat !== null ? nowSec - iat : null,
+    secondsUntilExpiry,
+    alreadyExpired: secondsUntilExpiry !== null && secondsUntilExpiry <= 0,
+  });
+}
+
 export async function signInWithGoogleNative(): Promise<GoogleIdTokenResult> {
   ensureGoogleConfigured();
   await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
@@ -88,30 +140,16 @@ export async function signInWithGoogleNative(): Promise<GoogleIdTokenResult> {
     if (!isSuccessResponse(response)) {
       throw new SocialSignInCancelled();
     }
-    let {idToken} = response.data;
+    const {idToken} = response.data;
     const {user} = response.data;
-
-    // Belt-and-braces (Android only): if signIn() still handed back a stale
-    // idToken, clear the cached access token and pull fresh tokens.
-    if (Platform.OS === 'android') {
-      try {
-        const tokens = await GoogleSignin.getTokens();
-        if (tokens.accessToken) {
-          await GoogleSignin.clearCachedAccessToken(tokens.accessToken);
-        }
-        const fresh = await GoogleSignin.getTokens();
-        if (fresh.idToken) {
-          idToken = fresh.idToken;
-        }
-      } catch {
-        // best-effort — fall back to whatever signIn() returned.
-      }
-    }
 
     if (!idToken) {
       throw new Error(
         'Google did not return an ID token. Check your webClientId configuration.',
       );
+    }
+    if (__DEV__) {
+      logGoogleIdTokenClaims(idToken);
     }
     return {idToken, email: user.email, name: user.name ?? undefined};
   } catch (err) {
