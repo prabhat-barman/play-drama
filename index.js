@@ -3,7 +3,10 @@
  */
 
 import { AppRegistry } from 'react-native';
-import messaging from '@react-native-firebase/messaging';
+import {
+  getMessaging,
+  setBackgroundMessageHandler,
+} from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import App from './App';
 import { name as appName } from './app.json';
@@ -22,7 +25,7 @@ import { name as appName } from './app.json';
 // data + notification hybrid messages, but calling `displayNotification`
 // again would show a duplicate — hence the guard below).
 try {
-  messaging().setBackgroundMessageHandler(async remoteMessage => {
+  setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
     if (remoteMessage?.notification?.title) {
       // OS already displayed it; nothing to do.
       return;
