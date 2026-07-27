@@ -32,7 +32,7 @@ export function WatchlistScreen(_: Props) {
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.brand}>CINESTREAM</Text>
+        <Text style={styles.brand}>PLAY DRAMA</Text>
         <Pressable hitSlop={8} style={styles.editBtn}>
           <EditIcon size={16} color={colors.textMuted} />
           <Text style={styles.editText}>EDIT</Text>

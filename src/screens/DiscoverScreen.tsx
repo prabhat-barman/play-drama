@@ -28,6 +28,7 @@ import {
 import {SectionHeader} from '../components/SectionHeader';
 import {MovieCard} from '../components/MovieCard';
 import {api} from '../lib/api';
+import type {Student} from '../lib/api';
 import {webseriesToContent} from '../lib/adapters';
 import {useApi} from '../lib/useApi';
 import {useAuth} from '../context/AuthContext';
@@ -72,6 +73,24 @@ export function DiscoverScreen({navigation}: Props) {
 
   const {data, loading, error, reload} = useApi(fetchDiscover, [token, genre]);
 
+  // Students (Actors) rail — /mobile-users/students. Fails silently: an
+  // error just collapses the section so the rest of the screen renders
+  // exactly as before.
+  const fetchStudents = useCallback(
+    (signal: AbortSignal) => {
+      if (!token) {
+        return null;
+      }
+      return api.students
+        .list({token, limit: 20, signal})
+        .then(res => res.data)
+        .catch(() => [] as Student[]);
+    },
+    [token],
+  );
+  const {data: studentsData} = useApi<Student[]>(fetchStudents, [token]);
+  const students: Student[] = studentsData ?? [];
+
   const items: ContentItem[] = data ?? [];
   const featured = items[0];
   const trending = items.slice(0, 8);
@@ -85,7 +104,7 @@ export function DiscoverScreen({navigation}: Props) {
     <View style={styles.root}>
       <SafeAreaView edges={['top']}>
         <View style={styles.headerRow}>
-          <Text style={styles.brand}>CINESTREAM</Text>
+          <Text style={styles.brand}>PLAY DRAMA</Text>
         </View>
         <View style={styles.searchBar}>
           <SearchIcon size={20} color={colors.textMuted} />
@@ -179,6 +198,27 @@ export function DiscoverScreen({navigation}: Props) {
                   onPress={() => openMovie(item.id)}
                 />
               )}
+            />
+          </>
+        ) : null}
+
+        {students.length ? (
+          <>
+            <SectionHeader
+              title="Actors"
+              action="See All"
+              compact
+            />
+            <FlatList
+              horizontal
+              data={students}
+              keyExtractor={s => s._id}
+              contentContainerStyle={styles.hlist}
+              ItemSeparatorComponent={() => (
+                <View style={{width: spacing.sm + 2}} />
+              )}
+              showsHorizontalScrollIndicator={false}
+              renderItem={({item}) => <StudentAvatar student={item} />}
             />
           </>
         ) : null}
@@ -285,6 +325,57 @@ export function DiscoverScreen({navigation}: Props) {
           </>
         ) : null}
       </ScrollView>
+    </View>
+  );
+}
+
+function studentInitials(fullName: string): string {
+  return (
+    fullName
+      .split(' ')
+      .map(p => p[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || '?'
+  );
+}
+
+function StudentAvatar({student}: {student: Student}) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const showImage = !!student.profileImage && !imgFailed;
+  const subtitle = student.course || student.department;
+  return (
+    <View style={styles.studentCard}>
+      <View style={styles.studentAvatarRing}>
+        {showImage ? (
+          <Image
+            source={{uri: student.profileImage!}}
+            style={styles.studentAvatar}
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <View style={styles.studentAvatarFallback}>
+            <Text style={styles.studentInitials}>
+              {studentInitials(student.fullName)}
+            </Text>
+          </View>
+        )}
+      </View>
+      <Text
+        style={styles.studentName}
+        numberOfLines={1}
+        ellipsizeMode="tail">
+        {student.fullName}
+      </Text>
+      {subtitle ? (
+        <Text
+          style={styles.studentMeta}
+          numberOfLines={1}
+          ellipsizeMode="tail">
+          {subtitle}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -417,6 +508,50 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   hlist: {paddingHorizontal: spacing.md},
+  studentCard: {
+    width: 84,
+    alignItems: 'center',
+  },
+  studentAvatarRing: {
+    padding: 2,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: colors.brand,
+    marginBottom: 6,
+  },
+  studentAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.surface,
+  },
+  studentAvatarFallback: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  studentInitials: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  studentName: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    width: 84,
+  },
+  studentMeta: {
+    color: colors.textMuted,
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 2,
+    width: 84,
+  },
   featured: {
     marginHorizontal: spacing.md,
     marginTop: spacing.sm,

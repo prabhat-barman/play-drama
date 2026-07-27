@@ -3,9 +3,10 @@ import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import {colors, radius, spacing, typography} from '../theme/colors';
+import {colors, radius, spacing} from '../theme/colors';
 import {PrimaryButton} from '../components/PrimaryButton';
 import {PlayIcon} from '../components/icons';
+import {Logo} from '../components/Logo';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
@@ -57,14 +58,18 @@ export function OnboardingScreen({navigation}: Props) {
       </View>
 
       <LinearGradient
-        colors={['rgba(10,10,10,0.6)', 'rgba(10,10,10,0.85)', colors.background]}
+        colors={[
+          'rgba(21,17,29,0.6)',
+          'rgba(21,17,29,0.85)',
+          colors.background,
+        ]}
         locations={[0, 0.55, 1]}
         style={StyleSheet.absoluteFill}
       />
 
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.header}>
-          <Text style={styles.logo}>CINESTREAM</Text>
+          <Logo variant="wordmark" width={220} />
         </View>
 
         <View style={styles.hero}>
@@ -115,12 +120,6 @@ const styles = StyleSheet.create({
   },
   safe: {flex: 1, paddingHorizontal: spacing.md + 4},
   header: {alignItems: 'center', paddingVertical: spacing.md},
-  logo: {
-    color: colors.brand,
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: -0.6,
-  },
   hero: {
     flex: 1,
     alignItems: 'center',
@@ -146,7 +145,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
     letterSpacing: -0.6,
-    lineHeight: typography.logo.lineHeight,
+    lineHeight: 34,
     textAlign: 'center',
     marginBottom: spacing.md,
   },

@@ -8,7 +8,8 @@ import {
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import {colors, spacing, typography} from '../theme/colors';
+import {colors, spacing} from '../theme/colors';
+import {Logo} from '../components/Logo';
 
 // Decorative TMDB stills for the splash poster wall. Not user-scoped — no
 // need to hit the API (user isn't authenticated yet on this screen).
@@ -93,13 +94,17 @@ export function SplashScreen() {
       </View>
 
       <LinearGradient
-        colors={['rgba(10,10,10,0.75)', 'rgba(10,10,10,0.95)', colors.background]}
+        colors={[
+          'rgba(21,17,29,0.75)',
+          'rgba(21,17,29,0.95)',
+          colors.background,
+        ]}
         locations={[0, 0.55, 1]}
         style={StyleSheet.absoluteFill}
       />
 
       <Animated.View style={[styles.center, {opacity: fade}]}>
-        <Text style={styles.logo}>CINESTREAM</Text>
+        <Logo variant="wordmark" width={280} />
         <Text style={styles.tagline}>Your front row seat awaits</Text>
       </Animated.View>
     </View>
@@ -142,19 +147,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
-  logo: {
-    color: colors.brand,
-    fontSize: typography.logo.fontSize,
-    fontWeight: typography.logo.fontWeight,
-    letterSpacing: typography.logo.letterSpacing,
-    lineHeight: typography.logo.lineHeight + 8,
-    textAlign: 'center',
-  },
   tagline: {
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 20,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
     letterSpacing: 0.4,
   },
 });

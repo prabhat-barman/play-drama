@@ -139,7 +139,7 @@ export function ProfileScreen({navigation}: Props) {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.brand}>CINESTREAM</Text>
+          <Text style={styles.brand}>PLAY DRAMA</Text>
         </View>
 
         <View style={styles.profileHead}>
@@ -242,7 +242,7 @@ export function ProfileScreen({navigation}: Props) {
           <Text style={styles.logoutText}>Log Out</Text>
         </Pressable>
 
-        <Text style={styles.version}>CineStream v0.1.0</Text>
+        <Text style={styles.version}>Play Drama v0.1.0</Text>
       </ScrollView>
 
       <EditProfileModal
@@ -508,8 +508,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(229,9,20,0.4)',
-    backgroundColor: 'rgba(229,9,20,0.08)',
+    borderColor: 'rgba(255,180,171,0.4)',
+    backgroundColor: 'rgba(255,180,171,0.08)',
     marginBottom: spacing.md,
   },
   errorText: {
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   logout: {
     height: 50,
     borderRadius: radius.md,
-    borderColor: 'rgba(229,9,20,0.5)',
+    borderColor: 'rgba(255,180,171,0.5)',
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

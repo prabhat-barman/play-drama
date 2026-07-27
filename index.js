@@ -39,7 +39,7 @@ try {
         sound: 'default',
       });
       await notifee.displayNotification({
-        title: remoteMessage?.data?.title || 'CineStream',
+        title: remoteMessage?.data?.title || 'Play Drama',
         body: remoteMessage?.data?.body || '',
         data: remoteMessage?.data || {},
         android: {
