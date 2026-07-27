@@ -274,6 +274,7 @@ Add the following under **Settings → Secrets and variables → Actions**:
 
 | Secret | Used by lane | How to get it |
 | --- | --- | --- |
+| `FIREBASE_IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64` | **all** (`simulator`, `beta`, `testflight`) | `ios/CineStream/GoogleService-Info.plist` is `.gitignore`d, so CI has to recreate it before Xcode's "Copy Bundle Resources" phase runs. Encode your local copy once: `base64 -i ios/CineStream/GoogleService-Info.plist \| pbcopy`. If you don't have it locally, download from <https://console.firebase.google.com/project/cinestream-1464c/settings/general> → iOS app → `GoogleService-Info.plist`. |
 | `FIREBASE_SERVICE_ACCOUNT` | `beta` | Already set up for Android — reused as-is. |
 | `FIREBASE_IOS_APP_ID` | `beta` | The `1:...:ios:...` string shown in Firebase console after registering the iOS app. |
 | `IOS_DIST_CERT_P12_BASE64` | `beta`, `testflight` | Export your distribution cert from Keychain Access → *Certificates* → right-click → *Export* → `.p12`. Then `base64 -i cert.p12 \| pbcopy`. |
