@@ -272,7 +272,7 @@ function HeroSection({
 
       <SafeAreaView edges={['top']} style={styles.heroTopBar}>
         <View style={styles.heroHeader}>
-          <Text style={styles.brand}>CINESTREAM</Text>
+          <Text style={styles.brand}>PLAY DRAMA</Text>
           <View style={styles.headerActions}>
             <Pressable hitSlop={8}>
               <CastIcon />

@@ -104,7 +104,7 @@ export function DiscoverScreen({navigation}: Props) {
     <View style={styles.root}>
       <SafeAreaView edges={['top']}>
         <View style={styles.headerRow}>
-          <Text style={styles.brand}>CINESTREAM</Text>
+          <Text style={styles.brand}>PLAY DRAMA</Text>
         </View>
         <View style={styles.searchBar}>
           <SearchIcon size={20} color={colors.textMuted} />

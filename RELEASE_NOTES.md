@@ -1,4 +1,4 @@
-CineStream — beta build
+Play Drama — beta build
 
 What's new
 - Fixed Google Sign-In "token expired" error on Android — signOut() before signIn() to force a fresh idToken every time.

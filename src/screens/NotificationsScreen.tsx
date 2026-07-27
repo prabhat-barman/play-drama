@@ -173,7 +173,7 @@ export function NotificationsScreen({navigation}: Props) {
           hitSlop={8}>
           <ChevronLeftIcon />
         </Pressable>
-        <Text style={styles.brand}>CINESTREAM</Text>
+        <Text style={styles.brand}>PLAY DRAMA</Text>
         <Pressable
           style={styles.iconBtn}
           hitSlop={8}
@@ -259,7 +259,7 @@ export function NotificationsScreen({navigation}: Props) {
         <View style={styles.premiumWrap}>
           <View style={styles.premiumHero}>
             <CrownIcon size={22} color="#ffb400" />
-            <Text style={styles.premiumTitle}>CineStream Premium</Text>
+            <Text style={styles.premiumTitle}>Play Drama Premium</Text>
             <Text style={styles.premiumSub}>
               Unlock 4K UHD, unlimited downloads, and an ad-free cinematic
               experience across all your devices.
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
     borderColor: colors.glassBorder,
     gap: spacing.md,
   },
-  cardUnread: {borderColor: 'rgba(229,9,20,0.35)'},
+  cardUnread: {borderColor: 'rgba(155,89,182,0.35)'},
   cardImg: {
     width: 60,
     height: 60,
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  chipNew: {backgroundColor: 'rgba(229,9,20,0.2)'},
+  chipNew: {backgroundColor: 'rgba(155,89,182,0.22)'},
   chipTrending: {backgroundColor: 'rgba(255,180,0,0.2)'},
   chipRec: {backgroundColor: 'rgba(80,180,255,0.2)'},
   chipReminder: {backgroundColor: 'rgba(94,224,137,0.2)'},

@@ -138,8 +138,8 @@ const styles = StyleSheet.create({
   successBox: {
     padding: spacing.md,
     borderRadius: 8,
-    backgroundColor: 'rgba(229, 9, 20, 0.08)',
-    borderColor: 'rgba(229, 9, 20, 0.25)',
+    backgroundColor: 'rgba(155, 89, 182, 0.10)',
+    borderColor: 'rgba(155, 89, 182, 0.28)',
     borderWidth: 1,
     marginBottom: spacing.md,
   },

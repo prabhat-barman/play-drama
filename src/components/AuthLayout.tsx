@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {colors, spacing, typography} from '../theme/colors';
+import {colors, spacing} from '../theme/colors';
+import {Logo} from './Logo';
 
 type Props = {
   children: React.ReactNode;
@@ -25,7 +26,11 @@ export function AuthLayout({children, footer}: Props) {
         style={styles.bgImage}
         imageStyle={styles.bgImageInner}>
         <LinearGradient
-          colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.6)', colors.background]}
+          colors={[
+            'rgba(21,17,29,0)',
+            'rgba(21,17,29,0.6)',
+            colors.background,
+          ]}
           locations={[0, 0.55, 0.85]}
           style={StyleSheet.absoluteFill}
         />
@@ -40,7 +45,7 @@ export function AuthLayout({children, footer}: Props) {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
             <View style={styles.logoWrap}>
-              <Text style={styles.logo}>CINESTREAM</Text>
+              <Logo variant="wordmark" width={240} />
               <Text style={styles.tagline}>Your front row seat awaits</Text>
             </View>
 
@@ -88,14 +93,6 @@ const styles = StyleSheet.create({
   logoWrap: {
     alignItems: 'center',
     marginBottom: spacing.xl,
-  },
-  logo: {
-    color: colors.brand,
-    fontSize: typography.logo.fontSize,
-    fontWeight: typography.logo.fontWeight,
-    letterSpacing: typography.logo.letterSpacing,
-    lineHeight: typography.logo.lineHeight,
-    textAlign: 'center',
   },
   tagline: {
     color: colors.textMuted,
