@@ -216,6 +216,51 @@ export type Actor = {
 };
 
 // ------------------------------
+// Students (Actors) — publicly browsable directory
+// Ref: GET /mobile-users/students, /mobile-users/students/{studentId}
+// Distinct from the legacy `Actor` shape returned by /actors — students
+// carry institute-scoped fields (course, department, batch, ...) and are
+// what the mobile "Actors" surface should show going forward.
+// ------------------------------
+
+export type Student = {
+  _id: string;
+  fullName: string;
+  profileImage?: string;
+  course?: string;
+  department?: string;
+  batch?: string;
+  semester?: string;
+  studentCode?: string;
+};
+
+export type StudentSocialLink = {
+  platform: string;
+  url: string;
+};
+
+export type StudentAchievement = {
+  title?: string;
+  description?: string;
+  date?: string; // ISO date (YYYY-MM-DD)
+  certificateUrl?: string;
+};
+
+export type StudentInstituteSummary = {
+  _id?: string;
+  name?: string;
+  logo?: string;
+};
+
+export type StudentDetail = Student & {
+  bio?: string;
+  skills?: string[];
+  socialLinks?: StudentSocialLink[];
+  achievements?: StudentAchievement[];
+  institute?: StudentInstituteSummary;
+};
+
+// ------------------------------
 // Notifications & push
 // ------------------------------
 
@@ -1302,6 +1347,39 @@ export const api = {
         token: input.token,
         signal: input.signal,
       }),
+  },
+
+  // Institute-scoped student directory. The backend sorts alphabetically
+  // by name and filters out deleted / inactive / blocked students, so the
+  // client doesn't need to post-filter.
+  students: {
+    list: (input: {
+      token: string;
+      page?: number;
+      limit?: number;
+      search?: string;
+      signal?: AbortSignal;
+    }) =>
+      requestPaginated<Student>('/mobile-users/students', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+        query: {
+          page: input.page,
+          limit: input.limit,
+          search: input.search,
+        },
+      }),
+
+    get: (input: {token: string; id: string; signal?: AbortSignal}) =>
+      request<StudentDetail>(
+        `/mobile-users/students/${encodeURIComponent(input.id)}`,
+        {
+          method: 'GET',
+          token: input.token,
+          signal: input.signal,
+        },
+      ),
   },
 
   notifications: {
