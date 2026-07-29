@@ -98,6 +98,12 @@ export function MovieDetailsScreen({navigation, route}: Props) {
   const isSeries =
     (movie?.totalEpisodes ?? 0) > 0 || episodes.length > 0;
 
+  // `movie.cast` (view-model, `string[]`) is populated only when the API
+  // returns cast members with `fullName` — currently only on
+  // `GET /mobile-users/webseries/:id`. Auto-hide the Cast tab when empty
+  // to avoid an empty screen for series without cast metadata.
+  const hasCast = (movie?.cast?.length ?? 0) > 0;
+
   const initialTab: TabKey = isSeries ? 'episodes' : 'related';
   const [tab, setTab] = useState<TabKey>(initialTab);
 
@@ -107,24 +113,26 @@ export function MovieDetailsScreen({navigation, route}: Props) {
     if (!movie) {
       return [];
     }
-    return isSeries
-      ? [
-          {key: 'episodes' as const, label: 'Episodes'},
-          {key: 'related' as const, label: 'Related'},
-          {key: 'cast' as const, label: 'Cast'},
-        ]
-      : [
-          {key: 'related' as const, label: 'Related'},
-          {key: 'cast' as const, label: 'Cast'},
-        ];
-  }, [isSeries, movie]);
+    const list: Array<{key: TabKey; label: string}> = [];
+    if (isSeries) {
+      list.push({key: 'episodes', label: 'Episodes'});
+    }
+    list.push({key: 'related', label: 'Related'});
+    if (hasCast) {
+      list.push({key: 'cast', label: 'Cast'});
+    }
+    return list;
+  }, [isSeries, movie, hasCast]);
 
   const activeTab: TabKey = useMemo(() => {
     if (!isSeries && tab === 'episodes') {
       return 'related';
     }
+    if (!hasCast && tab === 'cast') {
+      return isSeries ? 'episodes' : 'related';
+    }
     return tab;
-  }, [isSeries, tab]);
+  }, [isSeries, tab, hasCast]);
 
   if (loading && !movie) {
     return (
@@ -419,7 +427,7 @@ function formatEpisodeMeta(e: ApiEpisode): string {
   if (mins) {
     parts.push(`${mins} min`);
   }
-  if (e.status === 'PROCESSING' || e.status === 'PENDING') {
+  if (e.status === 'PROCESSING' || e.status === 'DRAFT') {
     parts.push('Coming soon');
   } else if (e.status === 'FAILED') {
     parts.push('Unavailable');

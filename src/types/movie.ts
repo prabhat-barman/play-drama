@@ -6,7 +6,6 @@
 // components can render safely — missing fields degrade gracefully.
 
 export type {
-  Actor,
   Episode as ApiEpisode,
   MobileUserProfile,
   Paginated,

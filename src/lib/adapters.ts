@@ -1,4 +1,4 @@
-import type {Actor, Episode as ApiEpisode, Webseries} from './api';
+import type {CastMember, Episode as ApiEpisode, Webseries} from './api';
 import type {ContentItem} from '../types/movie';
 
 const NEW_RELEASE_WINDOW_DAYS = 45;
@@ -50,7 +50,10 @@ export function webseriesToContent(w: Webseries): ContentItem {
     poster: w.thumbnail || w.coverImage || '',
     backdrop: w.coverImage || w.thumbnail || '',
     synopsis: w.description || '',
-    cast: w.cast?.map(a => a.name),
+    // `cast` is a union: unpopulated ObjectIds on list responses, populated
+    // `CastMember[]` on `GET /mobile-users/webseries/:id`. We only surface
+    // it when populated (list responses would show meaningless hex IDs).
+    cast: castMemberNames(w.cast),
     maturity: w.ageRating,
     isNew: isRecent(w.releaseDate),
     isPremium: w.isPremium,
@@ -66,8 +69,22 @@ export function episodeRuntimeMinutes(e: ApiEpisode): number | undefined {
   return Math.max(1, Math.round(e.duration / 60));
 }
 
-// Cast members as plain names, safe when `cast` is unpopulated on list
-// endpoints (only `/webseries/:id` populates it).
-export function actorNames(cast?: Actor[]): string[] {
-  return (cast ?? []).map(a => a.name);
+// Extract cast display names from the union `Webseries.cast` field.
+// - `CastMember[]` (populated on detail) → return `fullName` values
+// - `string[]`     (unpopulated ObjectIds on list) → return `undefined`
+//   so the UI shows a fallback rather than raw hex ids
+// - `undefined`    → return `undefined`
+function castMemberNames(
+  cast: Webseries['cast'],
+): string[] | undefined {
+  if (!Array.isArray(cast) || cast.length === 0) {
+    return undefined;
+  }
+  if (typeof cast[0] === 'string') {
+    return undefined;
+  }
+  return (cast as CastMember[])
+    .map(c => c?.fullName)
+    .filter((n): n is string => typeof n === 'string' && n.length > 0);
 }
+

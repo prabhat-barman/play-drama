@@ -10,7 +10,12 @@
 > - [`docs/BACKEND_HANDOFF.md`](./BACKEND_HANDOFF.md) — priorities, timeline, open decisions
 > - [`docs/API_ROADMAP.yaml`](./API_ROADMAP.yaml) — full OpenAPI 3.1 spec
 >
-> **Last updated:** 2026-07-27
+> **Last updated:** 2026-07-29
+>
+> **Recent changes:**
+> - **2026-07-29** — Web series and episodes moved under `/mobile-users/*` (was `/webseries*`, `/episodes*`). See [§ 5](#5-web-series-mobile-) and [§ 6](#6-episodes-mobile-).
+> - **2026-07-29** — Verified live shapes against Swagger. `Webseries.cast` is **not gone** — its shape changed: unpopulated ObjectIds (`string[]`) on list, populated `CastMember[]` = `{_id, fullName, profileImage?}` on `/mobile-users/webseries/:id`. `WebseriesStatus.IN_REVIEW` was renamed to `UNDER_REVIEW`; `EpisodeStatus.PENDING` was renamed to `DRAFT`. New optional fields on webseries: `visibility`, `popularity`.
+> - **2026-07-27** — Backend dropped the `Actors` DB table. `GET /actors*` and `GET /me/following/actors` are removed. Cast is now returned as student-like `CastMember` objects on detail responses (see below). The mobile app uses [Students](#4-students--actors-directory-) (`/mobile-users/students`) for the standalone Actors surface.
 
 ---
 
@@ -31,15 +36,15 @@
 2. [Auth](#2-auth-)
 3. [Mobile user profile](#3-mobile-user-profile-)
 4. [Students / Actors directory](#4-students--actors-directory-)
-5. [Web series (legacy)](#5-web-series-legacy-)
-6. [Episodes (legacy)](#6-episodes-legacy-)
-7. [Actors (legacy — will migrate to Students)](#7-actors-legacy--will-migrate-to-students-)
+5. [Web series](#5-web-series-mobile-)
+6. [Episodes](#6-episodes-mobile-)
+7. ~~Actors~~ **REMOVED 2026-07-27** — see [§ 7](#7-actors-removed-2026-07-27)
 8. [Notifications](#8-notifications-)
 9. [Device tokens (push)](#9-device-tokens-push-)
 10. [Home aggregator](#10-home-aggregator-)
 11. [Institutes](#11-institutes-)
 12. [Web series extras](#12-web-series-extras-)
-13. [Actor extras](#13-actor-extras-)
+13. ~~Actor extras~~ **REMOVED 2026-07-27** — see [§ 13](#13-actor-extras-removed-2026-07-27)
 14. [Playback](#14-playback-)
 15. [Watch progress / history](#15-watch-progress--history-)
 16. [Watchlist](#16-watchlist-)
@@ -500,25 +505,35 @@ Publicly browsable directory of institute-provisioned students who double as the
 
 ---
 
-## 5. Web series (legacy) ✅
+## 5. Web series (mobile) ✅
 
-### `GET /webseries` ✅ 🔒
+> **Path migration (2026-07-29):** These endpoints previously lived under `/webseries*` and moved to `/mobile-users/webseries*` to match the `/mobile-users/students` and `/mobile-users/profile` naming convention. The mobile client (`src/lib/api.ts`) has been updated; there are no live callers of the old paths.
+
+### `GET /mobile-users/webseries` ✅ 🔒
 
 **Purpose:** Browse published series. Powers Home / Discover / Watchlist rails.
 
 **Query params:** `status` (WebseriesStatus), `genre`, `search`, `page`, `limit`
 
-`WebseriesStatus` enum: `DRAFT | SUBMITTED | IN_REVIEW | APPROVED | REJECTED | PUBLISHED | ARCHIVED`. Mobile only ever passes `PUBLISHED`.
+`WebseriesStatus` enum: `DRAFT | SUBMITTED | UNDER_REVIEW | APPROVED | REJECTED | PUBLISHED | ARCHIVED`. Mobile only ever passes `PUBLISHED`.
 
-**Response 200 (paginated):** array of `Webseries` (see [`src/lib/api.ts`](../src/lib/api.ts) `Webseries` type). Populate `institute` summary but not `cast`.
+**Response 200 (paginated):** array of `MobileWebSeriesItem` (see [`src/lib/api.ts`](../src/lib/api.ts) `Webseries` type). Populate `institute` summary. On list responses, `cast` is `string[]` (unpopulated ObjectIds) — the mobile client does not read this on lists. **Do not embed `episodes[]` on list responses** — keep list payloads slim.
+
+**Extra fields the server emits (client tolerates all):** `visibility`, `popularity`, `trailerUrl`, `trailerThumb`, `duration`, `averageRating`, `ratingsCount`, `reviewsCount`, `followersCount`, `isInWatchlist`, `userRating`.
 
 ---
 
-### `GET /webseries/{id}` ✅ 🔒
+### `GET /mobile-users/webseries/{id}` ✅ 🔒
 
 **Purpose:** Full detail view (Movie Details screen).
 
-**Response 200:** full `Webseries` object with populated `institute` and `cast: Actor[]`. Should also emit the extended fields the app already reads (all optional, tolerated if missing):
+**Response 200:** full `MobileWebSeriesDetail` object with populated `institute`. All `MobileWebSeriesItem` fields, plus:
+
+- **`cast: CastMember[]`** — populated members: `{ _id: string; fullName: string; profileImage?: string }`. This is the current live shape (verified via Swagger 2026-07-29). Drives the Movie Details "Cast" tab.
+- **`episodes: Episode[]`** ⏳ *Requested but not yet implemented.* First page of episodes (sorted by `episodeNumber` ASC), max 30 items — saves the mobile client one round-trip. Client is already typed for this; ship when ready.
+- **`hasMoreEpisodes: boolean`** ⏳ *Requested but not yet implemented.* `true` if `totalEpisodes > episodes.length`. Client paginates via `GET /mobile-users/episodes?webSeriesId={id}&page=2` when this is `true`.
+
+Extended fields (all optional, tolerated if missing):
 
 - `trailerUrl`, `trailerThumb`, `duration`
 - `averageRating`, `ratingsCount`, `reviewsCount`
@@ -526,23 +541,27 @@ Publicly browsable directory of institute-provisioned students who double as the
 - `isInWatchlist` (per-caller)
 - `userRating` (per-caller, null when unrated)
 
+> **Cast history note (2026-07-27):** When the Actors DB table was dropped, the top-level `/actors*` endpoints were removed but `Webseries.cast` was **kept** on the detail response — its shape switched from the old `Actor` (with `bio`, `photo`, `skills`, ...) to the current lightweight `CastMember` (`_id`, `fullName`, `profileImage`). If richer per-cast data is needed later (bio / skills / follow), consider linking `CastMember._id` to a Student and letting the client fetch [Student detail](#4-students--actors-directory-) on demand rather than fattening this response.
+
 ---
 
-## 6. Episodes (legacy) ✅
+## 6. Episodes (mobile) ✅
 
-### `GET /episodes?webSeriesId={id}` ✅ 🔒
+> **Path migration (2026-07-29):** These endpoints previously lived under `/episodes*` and moved to `/mobile-users/episodes*`.
 
-**Purpose:** Season/episode list for the details screen.
+### `GET /mobile-users/episodes?webSeriesId={id}` ✅ 🔒
+
+**Purpose:** Paginated tail of episodes when the first page in `webseries/{id}.episodes` isn't enough (i.e. `hasMoreEpisodes: true`).
 
 **Query params:** `webSeriesId` (required), `page`, `limit`
 
-**Response 200 (paginated):** array of `Episode` objects: `_id, webSeriesId, title, description, episodeNumber, orderIndex, duration, videoUrl, thumbnail, status, releaseDate`.
+**Response 200 (paginated):** array of `MobileEpisodeItem` objects: `_id, webSeriesId, title, description, episodeNumber, orderIndex, duration, videoUrl, thumbnail, status, releaseDate`.
 
-`EpisodeStatus` enum: `PENDING | PROCESSING | COMPLETED | FAILED`. Mobile filters to `COMPLETED` client-side today; feel free to filter server-side by default.
+`EpisodeStatus` enum: `DRAFT | PROCESSING | COMPLETED | FAILED`. Mobile filters to `COMPLETED` client-side today; feel free to filter server-side by default.
 
 ---
 
-### `GET /episodes/{id}` ✅ 🔒
+### `GET /mobile-users/episodes/{id}` ✅ 🔒
 
 **Purpose:** Single-episode fetch (used when opening the player from a deep link).
 
@@ -552,14 +571,25 @@ Publicly browsable directory of institute-provisioned students who double as the
 
 ---
 
-## 7. Actors (legacy — will migrate to Students) ✅
+## 7. Actors (REMOVED 2026-07-27)
 
-These endpoints still exist for backward compatibility. Going forward the mobile app will progressively switch to [Students / Actors directory](#4-students--actors-directory-) (`/mobile-users/students`) which has richer institute-scoped fields.
+> **This section is intentionally kept as a tombstone** so future readers understand why `/actors*` no longer exists.
 
-- `GET /actors?page&limit&search` — paginated `Actor` list
-- `GET /actors/{id}` — single `Actor` detail
+The Actors DB table and all top-level `/actors*` endpoints were removed on 2026-07-27 by the backend team (they were creating confusion vs. institute-scoped Students).
 
-Do **not** invest new work here; roadmap wants the Student model to become canonical.
+**What survived:** `Webseries.cast` is still emitted — populated on `GET /mobile-users/webseries/{id}` as `CastMember[]` (`{_id, fullName, profileImage?}`) rather than the old `Actor[]`. The Movie Details "Cast" tab renders these names/avatars. See [§ 5 detail response](#5-web-series-mobile-).
+
+**What was removed:**
+
+- `GET /actors`, `GET /actors/{id}` (top-level directory)
+- `GET /actors/{id}/filmography`, `.../clips`, `.../upcoming`, `.../follow`, `.../followers`
+- `GET /me/following/actors`
+
+**Client migration:** `api.actors.*`, `api.actorsExtras.*`, `api.following.actors`, and the `Actor` type have been deleted from `src/lib/api.ts`. The Cast tab in MovieDetailsScreen was retained — it renders from the still-present `Webseries.cast` field.
+
+**Replacement for the standalone Actors directory:** [Students / Actors directory](#4-students--actors-directory-) (`/mobile-users/students`) — richer institute-scoped model with `course`, `department`, `batch`, achievements, etc.
+
+**If richer per-cast data is needed later** (bio, skills, follow), link `CastMember._id` to a Student `_id` so the client can fetch [Student detail](#4-students--actors-directory-) on-demand rather than fattening the webseries detail response.
 
 ---
 
@@ -686,7 +716,7 @@ Everything below is **not yet implemented** in the backend. Mobile app has typed
     "trending":        [ /* Webseries[] */ ],
     "recentlyReleased":[ /* Webseries[] */ ],
     "popularInstitutes":[ /* InstituteSummary[] */ ],
-    "newActors":       [ /* Actor[] or Student[] */ ],
+    "newStudents":     [ /* Student[] — replaces the deprecated newActors field */ ],
     "categories":      [ /* Genre[] */ ],
     "continueWatching":[ /* ContinueWatchingItem[] */ ],
     "recommendations": [ /* Webseries[] */ ]
@@ -720,7 +750,7 @@ Each nested list should be capped server-side (10-15 items) so the payload stays
 
 ### `GET /institutes/{id}/webseries` 🚧 🌓
 
-**Query:** `status, page, limit` — same as `/webseries`.
+**Query:** `status, page, limit` — same as `/mobile-users/webseries`.
 
 **Response 200 (paginated):** `Webseries[]` scoped to that institute.
 
@@ -760,7 +790,9 @@ Each nested list should be capped server-side (10-15 items) so the payload stays
 
 ## 12. Web series extras 🚧
 
-### `GET /webseries/{id}/related` 🚧 🌓
+> All sub-paths in this section extend the live `/mobile-users/webseries/{id}` endpoint documented in [§ 5](#5-web-series-mobile-).
+
+### `GET /mobile-users/webseries/{id}/related` 🚧 🌓
 
 **Purpose:** "You may also like" rail on the Details screen.
 
@@ -772,7 +804,7 @@ Recommendation algorithm free-form (genre overlap / same institute / cast overla
 
 ---
 
-### `GET /webseries/{id}/trailer` 🚧 🌓
+### `GET /mobile-users/webseries/{id}/trailer` 🚧 🌓
 
 **Purpose:** Play the trailer button on Details screen — the trailer may live on a separate CDN than the main HLS asset.
 
@@ -791,55 +823,27 @@ Recommendation algorithm free-form (genre overlap / same institute / cast overla
 
 ---
 
-## 13. Actor extras 🚧
+## 13. Actor extras (REMOVED 2026-07-27)
 
-Applies both to `/actors/{id}/*` (legacy) and eventually `/mobile-users/students/{id}/*` — whichever the backend chooses to expose.
+> **Tombstone** — kept so future readers see the deprecation reason.
 
-### `GET /actors/{id}/filmography` 🚧 🌓
+All `/actors/:id/*` roadmap endpoints (filmography, clips, upcoming, follow, unfollow, followers) were dropped with the Actors table on 2026-07-27. The mobile client no longer references them; `api.actorsExtras.*` has been deleted from `src/lib/api.ts`.
 
-**Purpose:** Auto-generated list of series this actor appears in (Phase 4 vision — no manual entry).
+**If similar functionality is needed later**, propose it under `/mobile-users/students/{id}/*` — e.g.:
 
-**Response 200 (paginated):** `Webseries[]`.
+- `GET /mobile-users/students/{id}/filmography` → `Webseries[]` (series where the student appeared)
+- `GET /mobile-users/students/{id}/clips` → highlight clips
+- `POST /mobile-users/students/{id}/follow` · `DELETE ...` → follow the student
 
-Derivation: any web series whose `cast[]` contains this actor `_id`, ordered by `releaseDate desc`.
-
----
-
-### `GET /actors/{id}/clips` 🚧 🌓
-
-**Purpose:** Short highlight clips extracted from series (Phase 4).
-
-**Response 200 (paginated):** `ActingClip[]` — `{ id, title?, videoUrl, thumbnail?, durationSec?, webSeriesId?, episodeId?, createdAt? }`.
-
-If clip generation isn't in scope yet, return empty array — mobile handles gracefully.
-
----
-
-### `GET /actors/{id}/upcoming` 🚧 🌓
-
-**Purpose:** Series where this actor is cast but which haven't released yet.
-
-**Response 200 (paginated):** `Webseries[]` filtered on `releaseDate > now` OR `status IN [APPROVED, SUBMITTED]`.
-
----
-
-### `POST /actors/{id}/follow` · `DELETE /actors/{id}/follow` 🚧 🔒
-
-Same shape as institute follow (`{isFollowing, followersCount}`).
-
----
-
-### `GET /actors/{id}/followers` 🚧 🌓
-
-Paginated `FollowerUser[]`.
+Model derivation would be: a webseries has a `students: StudentSummary[]` field (per [§ 5](#5-web-series-mobile-)); filmography = webseries whose `students[]` contains `studentId`.
 
 ---
 
 ## 14. Playback 🚧
 
-Critical for Phase 5. Replaces the current insecure `episode.videoUrl` in `GET /episodes/{id}`.
+Critical for Phase 5. Replaces the current insecure `episode.videoUrl` in `GET /mobile-users/episodes/{id}`.
 
-### `GET /episodes/{episodeId}/playback` 🚧 🔒
+### `GET /mobile-users/episodes/{episodeId}/playback` 🚧 🔒
 
 **Purpose:** Issue a **short-lived signed HLS URL** + player context. Backend enforces entitlement here (subscription tier, geo, DRM, concurrency).
 
@@ -985,7 +989,7 @@ Idempotent — re-adding an existing item returns 200, doesn't duplicate.
 
 Idempotent — removing something not in the list is still 200.
 
-> **UX note:** `webseries.isInWatchlist` field on `GET /webseries/{id}` (see [§ 5](#5-web-series-legacy-)) drives the heart icon state. Toggling calls the add / remove endpoints and optimistically flips the flag.
+> **UX note:** `webseries.isInWatchlist` field on `GET /mobile-users/webseries/{id}` (see [§ 5](#5-web-series-mobile-)) drives the heart icon state. Toggling calls the add / remove endpoints and optimistically flips the flag.
 
 ---
 
@@ -1010,7 +1014,7 @@ Idempotent — removing something not in the list is still 200.
   "data": {
     "query": "avengers",
     "webseries":  [ /* Webseries[] */ ],
-    "actors":     [ /* Actor[] */ ],
+    "students":   [ /* Student[] — replaces the deprecated actors field */ ],
     "institutes": [ /* InstituteSummary[] */ ],
     "genres":     [ /* Genre[] */ ]
   }
@@ -1091,7 +1095,9 @@ Server-side recent searches per user.
 
 ## 19. Reviews / Ratings 🚧
 
-### `POST /webseries/{id}/rate` 🚧 🔒
+> Review/rating sub-paths extend the live `/mobile-users/webseries/{id}` endpoint documented in [§ 5](#5-web-series-mobile-). Individual review actions (`PATCH /reviews/{id}`, etc.) stay top-level for shareability across surfaces.
+
+### `POST /mobile-users/webseries/{id}/rate` 🚧 🔒
 
 **Body:** `{ "stars": 4 }` (1-5 integer)
 **Response 200:** `RatingSummary` — `{ averageRating, ratingsCount, userRating, distribution?: {"5": n5, "4": n4, ...} }`.
@@ -1100,14 +1106,14 @@ Idempotent — re-rating updates the previous vote.
 
 ---
 
-### `DELETE /webseries/{id}/rate` 🚧 🔒
+### `DELETE /mobile-users/webseries/{id}/rate` 🚧 🔒
 
 **Purpose:** Withdraw the user's rating.
 **Response 200:** `{ "success": true, "data": { "message": "Unrated" } }`
 
 ---
 
-### `GET /webseries/{id}/reviews` 🚧 🌓
+### `GET /mobile-users/webseries/{id}/reviews` 🚧 🌓
 
 **Query:** `page, limit, sort` (`recent | helpful | stars_desc | stars_asc`)
 **Response 200 (paginated):** `Review[]`:
@@ -1127,7 +1133,7 @@ Idempotent — re-rating updates the previous vote.
 
 ---
 
-### `POST /webseries/{id}/reviews` 🚧 🔒
+### `POST /mobile-users/webseries/{id}/reviews` 🚧 🔒
 
 **Body:** `{ "text": "...", "stars": 5 }` — `stars` optional (rating can be posted separately via `/rate`).
 **Response 200:** the created `Review`.
@@ -1162,12 +1168,7 @@ Idempotent — re-rating updates the previous vote.
 
 ## 20. Following 🚧
 
-### `GET /me/following/actors` 🚧 🔒
-
-**Query:** `page, limit`
-**Response 200 (paginated):** `Actor[]` the user follows.
-
----
+> `GET /me/following/actors` was removed on 2026-07-27 along with the Actors table. If per-student follow ships later, add `GET /me/following/students` returning `Student[]`.
 
 ### `GET /me/following/institutes` 🚧 🔒
 
@@ -1427,7 +1428,8 @@ Backend should support "sliding" refresh: if a refresh token is used within its 
 | Endpoint | Target payload |
 |---|---|
 | `GET /home` | < 50 KB |
-| `GET /webseries` (list) | < 30 KB / page |
+| `GET /mobile-users/webseries` (list) | < 30 KB / page |
+| `GET /mobile-users/webseries/{id}` (detail, with embedded episodes) | < 60 KB |
 | `GET /search` | < 40 KB |
 | `GET /search/suggest` | < 5 KB |
 | `GET /me/continue-watching` | < 15 KB |
