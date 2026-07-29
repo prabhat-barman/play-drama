@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
+<!--
+  Sign in with Apple (com.apple.developer.applesignin) was removed on
+  2026-07-29 so the app can be signed by Apple's Personal (free)
+  provisioning team — free teams cannot sign that capability.
+
+  To re-enable once the app is signed by a paid Apple Developer team:
+    1. Restore the applesignin key/array inside <dict>...</dict>:
+         <key>com.apple.developer.applesignin</key>
+         <array><string>Default</string></array>
+    2. Restore the SystemCapabilities.com.apple.developer.applesignin
+       block in ios/CineStream.xcodeproj/project.pbxproj.
+    3. Flip ENABLE_APPLE_SIGN_IN to `true` in src/lib/oauth.ts.
+-->
 <dict>
-	<key>com.apple.developer.applesignin</key>
-	<array>
-		<string>Default</string>
-	</array>
 </dict>
 </plist>

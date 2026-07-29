@@ -190,8 +190,22 @@ export async function signOutGoogle(): Promise<void> {
 // Apple
 // ------------------------------
 
+// Feature flag: `Sign in with Apple` requires the `applesignin` entitlement,
+// which Apple's Personal (free) provisioning teams **cannot** sign. To keep
+// free-provisioning device installs working (so testers without paid Apple
+// Dev access can try the app on their iPhones), we ship the capability off
+// by default. The native module + code path stay wired so re-enabling is a
+// one-line change once the app is signed by a paid Apple Developer team:
+//   1. Flip this flag to `true`.
+//   2. Restore `com.apple.developer.applesignin` in
+//      `ios/CineStream/CineStream.entitlements`.
+//   3. Restore the `SystemCapabilities.com.apple.developer.applesignin`
+//      block in `ios/CineStream.xcodeproj/project.pbxproj`.
+// See DISTRIBUTION.md → "iOS distribution" for the paid-team setup.
+const ENABLE_APPLE_SIGN_IN = false;
+
 export const isAppleAuthAvailable =
-  Platform.OS === 'ios' && appleAuth.isSupported;
+  ENABLE_APPLE_SIGN_IN && Platform.OS === 'ios' && appleAuth.isSupported;
 
 export type AppleIdentityTokenResult = {
   identityToken: string;
