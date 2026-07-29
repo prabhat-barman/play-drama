@@ -138,11 +138,23 @@ export type MeResponseData =
 export type WebseriesStatus =
   | 'DRAFT'
   | 'SUBMITTED'
-  | 'IN_REVIEW'
+  | 'UNDER_REVIEW'
   | 'APPROVED'
   | 'REJECTED'
   | 'PUBLISHED'
   | 'ARCHIVED';
+
+// Populated cast entry on `GET /mobile-users/webseries/{id}`. When the
+// Actors DB table was dropped (2026-07-27) the backend kept the `cast`
+// field on webseries but switched its populated shape from `Actor` to a
+// lightweight student-like summary (fullName + profileImage). On list
+// responses `cast` comes back as unpopulated ObjectIds (`string[]`) which
+// the mobile app currently doesn't use.
+export type CastMember = {
+  _id: string;
+  fullName: string;
+  profileImage?: string;
+};
 
 export type Webseries = {
   _id: string;
@@ -160,7 +172,22 @@ export type Webseries = {
   releaseDate?: string;
   createdAt?: string;
   updatedAt?: string;
-  cast?: Actor[]; // populated on /webseries/:id
+  // On list responses (`GET /mobile-users/webseries`) `cast` comes back as
+  // unpopulated ObjectIds (`string[]`); on detail (`GET .../{id}`) it is
+  // populated with `CastMember[]`. Union kept so both list and detail
+  // deserialise cleanly — screens should type-guard before rendering
+  // names / avatars. See `webseriesToContent` for the read path.
+  cast?: string[] | CastMember[];
+  visibility?: string;
+  popularity?: number;
+  // Populated on GET /mobile-users/webseries/:id — first page of episodes
+  // embedded to save the client one round-trip. NOT emitted by the backend
+  // yet (proposed in the client → Swapnil handoff on 2026-07-29). Kept
+  // optional so the field appears the day the backend ships it without a
+  // client redeploy. `hasMoreEpisodes: true` will signal the client to
+  // paginate via GET /mobile-users/episodes.
+  episodes?: Episode[];
+  hasMoreEpisodes?: boolean;
   // Roadmap fields (Phase 2/3). All optional so existing screens keep working
   // even before the backend starts emitting them.
   trailerUrl?: string;
@@ -177,7 +204,7 @@ export type Webseries = {
 };
 
 export type EpisodeStatus =
-  | 'PENDING'
+  | 'DRAFT'
   | 'PROCESSING'
   | 'COMPLETED'
   | 'FAILED';
@@ -196,31 +223,13 @@ export type Episode = {
   releaseDate?: string;
 };
 
-export type Actor = {
-  _id: string;
-  name: string;
-  bio?: string;
-  photo?: string;
-  socialLinks?: Record<string, string>;
-  gallery?: string[];
-  skills?: string[];
-  // Roadmap fields (Phase 4 & 8).
-  city?: string;
-  age?: number;
-  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
-  instituteId?: string;
-  institute?: InstituteSummary;
-  followersCount?: number;
-  isFollowing?: boolean;
-  filmographyCount?: number;
-};
-
 // ------------------------------
 // Students (Actors) — publicly browsable directory
 // Ref: GET /mobile-users/students, /mobile-users/students/{studentId}
-// Distinct from the legacy `Actor` shape returned by /actors — students
-// carry institute-scoped fields (course, department, batch, ...) and are
-// what the mobile "Actors" surface should show going forward.
+// This replaces the legacy `Actor` type (backend dropped the Actors table
+// on 2026-07-27; students carry institute-scoped fields — course,
+// department, batch, ... — and are what the mobile "Actors" surface shows
+// going forward).
 // ------------------------------
 
 export type Student = {
@@ -491,12 +500,12 @@ export type WatchHistoryItem = ContinueWatchingItem & {
 };
 
 // ---- Search (Phase 6) ----
-export type SearchEntityType = 'webseries' | 'actor' | 'institute' | 'genre';
+export type SearchEntityType = 'webseries' | 'student' | 'institute' | 'genre';
 
 export type SearchResult = {
   query: string;
   webseries: Webseries[];
-  actors: Actor[];
+  students: Student[];
   institutes: InstituteSummary[];
   genres: Genre[];
 };
@@ -531,7 +540,7 @@ export type HomeFeed = {
   trending: Webseries[];
   recentlyReleased: Webseries[];
   popularInstitutes: InstituteSummary[];
-  newActors: Actor[];
+  newStudents: Student[];
   categories: Genre[];
   continueWatching?: ContinueWatchingItem[];
   recommendations?: Webseries[];
@@ -1274,7 +1283,7 @@ export const api = {
       limit?: number;
       signal?: AbortSignal;
     }) =>
-      requestPaginated<Webseries>('/webseries', {
+      requestPaginated<Webseries>('/mobile-users/webseries', {
         method: 'GET',
         token: input.token,
         signal: input.signal,
@@ -1288,7 +1297,7 @@ export const api = {
       }),
 
     get: (input: {token: string; id: string; signal?: AbortSignal}) =>
-      request<Webseries>(`/webseries/${encodeURIComponent(input.id)}`, {
+      request<Webseries>(`/mobile-users/webseries/${encodeURIComponent(input.id)}`, {
         method: 'GET',
         token: input.token,
         signal: input.signal,
@@ -1303,7 +1312,7 @@ export const api = {
       limit?: number;
       signal?: AbortSignal;
     }) =>
-      requestPaginated<Episode>('/episodes', {
+      requestPaginated<Episode>('/mobile-users/episodes', {
         method: 'GET',
         token: input.token,
         signal: input.signal,
@@ -1315,39 +1324,17 @@ export const api = {
       }),
 
     get: (input: {token: string; id: string; signal?: AbortSignal}) =>
-      request<Episode>(`/episodes/${encodeURIComponent(input.id)}`, {
+      request<Episode>(`/mobile-users/episodes/${encodeURIComponent(input.id)}`, {
         method: 'GET',
         token: input.token,
         signal: input.signal,
       }),
   },
 
-  actors: {
-    list: (input: {
-      token: string;
-      page?: number;
-      limit?: number;
-      search?: string;
-      signal?: AbortSignal;
-    }) =>
-      requestPaginated<Actor>('/actors', {
-        method: 'GET',
-        token: input.token,
-        signal: input.signal,
-        query: {
-          page: input.page,
-          limit: input.limit,
-          search: input.search,
-        },
-      }),
-
-    get: (input: {token: string; id: string; signal?: AbortSignal}) =>
-      request<Actor>(`/actors/${encodeURIComponent(input.id)}`, {
-        method: 'GET',
-        token: input.token,
-        signal: input.signal,
-      }),
-  },
+  // NOTE: The legacy `actors` group (`GET /actors`, `GET /actors/:id`) was
+  // removed on 2026-07-27 when the backend dropped the Actors DB table.
+  // Use `api.students.*` (institute-scoped student directory) instead — that
+  // is the surface the mobile "Actors" tabs consume going forward.
 
   // Institute-scoped student directory. The backend sorts alphabetically
   // by name and filters out deleted / inactive / blocked students, so the
@@ -1536,7 +1523,7 @@ export const api = {
       limit?: number;
       signal?: AbortSignal;
     }) =>
-      requestPaginated<Actor>(
+      requestPaginated<Student>(
         `/institutes/${encodeURIComponent(input.id)}/students`,
         {
           method: 'GET',
@@ -1605,85 +1592,12 @@ export const api = {
       ),
   },
 
-  // ---- Phase 4 & 8: Actor extras ----
-  actorsExtras: {
-    filmography: (input: {
-      token?: string | null;
-      id: string;
-      page?: number;
-      limit?: number;
-      signal?: AbortSignal;
-    }) =>
-      requestPaginated<Webseries>(
-        `/actors/${encodeURIComponent(input.id)}/filmography`,
-        {
-          method: 'GET',
-          token: input.token,
-          signal: input.signal,
-          query: {page: input.page, limit: input.limit},
-        },
-      ),
-
-    clips: (input: {
-      token?: string | null;
-      id: string;
-      page?: number;
-      limit?: number;
-      signal?: AbortSignal;
-    }) =>
-      requestPaginated<ActingClip>(
-        `/actors/${encodeURIComponent(input.id)}/clips`,
-        {
-          method: 'GET',
-          token: input.token,
-          signal: input.signal,
-          query: {page: input.page, limit: input.limit},
-        },
-      ),
-
-    upcoming: (input: {
-      token?: string | null;
-      id: string;
-      signal?: AbortSignal;
-    }) =>
-      requestPaginated<Webseries>(
-        `/actors/${encodeURIComponent(input.id)}/upcoming`,
-        {
-          method: 'GET',
-          token: input.token,
-          signal: input.signal,
-        },
-      ),
-
-    follow: (input: {token: string; id: string}) =>
-      request<FollowState>(
-        `/actors/${encodeURIComponent(input.id)}/follow`,
-        {method: 'POST', token: input.token},
-      ),
-
-    unfollow: (input: {token: string; id: string}) =>
-      request<FollowState>(
-        `/actors/${encodeURIComponent(input.id)}/follow`,
-        {method: 'DELETE', token: input.token},
-      ),
-
-    followers: (input: {
-      token?: string | null;
-      id: string;
-      page?: number;
-      limit?: number;
-      signal?: AbortSignal;
-    }) =>
-      requestPaginated<FollowerUser>(
-        `/actors/${encodeURIComponent(input.id)}/followers`,
-        {
-          method: 'GET',
-          token: input.token,
-          signal: input.signal,
-          query: {page: input.page, limit: input.limit},
-        },
-      ),
-  },
+  // ---- Phase 4 & 8: Actor extras (REMOVED) ----
+  // The `actorsExtras` group (filmography / clips / upcoming / follow /
+  // unfollow / followers under `/actors/:id/*`) was removed on 2026-07-27
+  // along with the Actors DB table. When students-based cast / filmography
+  // endpoints ship, add them under `api.studentsExtras.*` or extend
+  // `api.students` directly.
 
   // ---- Phase 5: Playback ----
   playback: {
@@ -2010,20 +1924,10 @@ export const api = {
   },
 
   // ---- Followed lists on /me ----
+  // `following.actors` (`GET /me/following/actors`) was removed on
+  // 2026-07-27 with the Actors table. If per-student follow ships later,
+  // add `following.students` here pointing at `/me/following/students`.
   following: {
-    actors: (input: {
-      token: string;
-      page?: number;
-      limit?: number;
-      signal?: AbortSignal;
-    }) =>
-      requestPaginated<Actor>('/me/following/actors', {
-        method: 'GET',
-        token: input.token,
-        signal: input.signal,
-        query: {page: input.page, limit: input.limit},
-      }),
-
     institutes: (input: {
       token: string;
       page?: number;
