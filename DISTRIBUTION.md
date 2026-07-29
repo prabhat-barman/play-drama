@@ -120,7 +120,7 @@ JSON key**. Steps:
 #### 3. Add it as a GitHub secret
 
 1. Open the repo on GitHub:
-   <https://github.com/prabhat-barman/CineStream/settings/secrets/actions>
+   <https://github.com/prabhat-barman/play-drama/settings/secrets/actions>
 2. **New repository secret**.
    - Name: `FIREBASE_SERVICE_ACCOUNT`
    - Value: paste the **entire JSON file contents**.
