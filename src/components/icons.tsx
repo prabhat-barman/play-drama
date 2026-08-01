@@ -578,3 +578,47 @@ export function CrownIcon({size = 16, color = '#ffb400'}: IconProps) {
     </Svg>
   );
 }
+
+export function NextEpisodeIcon({size = 24, color = '#e5e2e1'}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M5 4l10 8-10 8V4zM19 5v14"
+        fill={color}
+        stroke={color}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function PrevEpisodeIcon({size = 24, color = '#e5e2e1'}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M19 4L9 12l10 8V4zM5 5v14"
+        fill={color}
+        stroke={color}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function EpisodesListIcon({size = 20, color = '#e5e2e1'}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M8 6h13M8 12h13M8 18h13M3 6h2M3 12h2M3 18h2"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+

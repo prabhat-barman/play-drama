@@ -3,8 +3,11 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  FlatList,
   Image,
+  Modal,
   Pressable,
+  Share,
   StatusBar,
   StyleSheet,
   Text,
@@ -18,11 +21,16 @@ import {colors, radius, spacing} from '../theme/colors';
 import {
   CastIcon,
   CloseIcon,
+  EpisodesListIcon,
   ExpandIcon,
   ForwardIcon,
+  HeartIcon,
+  NextEpisodeIcon,
   PauseIcon,
   PlayIcon,
+  PrevEpisodeIcon,
   RewindIcon,
+  ShareIcon,
   SubtitlesIcon,
 } from '../components/icons';
 import {api, type Episode as ApiEpisode, type Webseries} from '../lib/api';
@@ -34,6 +42,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Player'>;
 
 type PlayerBundle = {
   series: Webseries;
+  episodes: ApiEpisode[];
   firstEpisode: ApiEpisode | null;
 };
 
@@ -48,6 +57,12 @@ const formatTime = (s: number) => {
 export function PlayerScreen({navigation, route}: Props) {
   const {token} = useAuth();
   const id = route.params.id;
+  const targetEpisodeId = route.params.episodeId;
+
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [episodesModalVisible, setEpisodesModalVisible] = useState(false);
+  const [castModalVisible, setCastModalVisible] = useState(false);
 
   const fetchBundle = useCallback(
     async (signal: AbortSignal): Promise<PlayerBundle> => {
@@ -55,26 +70,47 @@ export function PlayerScreen({navigation, route}: Props) {
         throw new Error('Not signed in');
       }
       const series = await api.webseries.get({token, id, signal});
-      let firstEpisode: ApiEpisode | null = null;
+      let selectedEpisode: ApiEpisode | null = null;
+      let episodesList: ApiEpisode[] = [];
+
       try {
         const eps = await api.episodes.list({
           token,
           webSeriesId: id,
-          limit: 1,
+          limit: 100,
           signal,
         });
-        firstEpisode =
-          eps.data.find(e => e.status === 'COMPLETED') ?? eps.data[0] ?? null;
+        episodesList = eps.data ?? [];
+
+        if (targetEpisodeId) {
+          selectedEpisode =
+            episodesList.find(
+              e => e._id === targetEpisodeId || (e as any).id === targetEpisodeId,
+            ) ?? null;
+        }
+        if (!selectedEpisode) {
+          selectedEpisode =
+            episodesList.find(e => e.status === 'COMPLETED') ?? episodesList[0] ?? null;
+        }
       } catch {
-        // Episodes are optional — playback still works from series metadata
-        // when no episodes exist yet (e.g. a movie webseries).
+        if (targetEpisodeId) {
+          try {
+            selectedEpisode = await api.episodes.get({
+              token,
+              id: targetEpisodeId,
+              signal,
+            });
+          } catch {
+            // Silently ignore
+          }
+        }
       }
-      return {series, firstEpisode};
+      return {series, episodes: episodesList, firstEpisode: selectedEpisode};
     },
-    [token, id],
+    [token, id, targetEpisodeId],
   );
 
-  const {data, loading, error, reload} = useApi(fetchBundle, [token, id]);
+  const {data, loading, error, reload} = useApi(fetchBundle, [token, id, targetEpisodeId]);
 
   const totalSec =
     (data?.firstEpisode?.duration && data.firstEpisode.duration > 0
@@ -86,6 +122,66 @@ export function PlayerScreen({navigation, route}: Props) {
   const [showControls, setShowControls] = useState(true);
   const fade = useRef(new Animated.Value(1)).current;
   const videoRef = useRef<any>(null);
+
+  const episodes = data?.episodes ?? [];
+  const currentEpIndex = episodes.findIndex(
+    e =>
+      (e._id || (e as any).id) ===
+      (data?.firstEpisode?._id || (data?.firstEpisode as any)?.id),
+  );
+
+  const hasNextEp = currentEpIndex >= 0 && currentEpIndex < episodes.length - 1;
+  const hasPrevEp = currentEpIndex > 0;
+
+  const handleSelectEpisode = (ep: ApiEpisode) => {
+    setEpisodesModalVisible(false);
+    navigation.replace('Player', {
+      id: data?.series?._id || (data?.series as any)?.id || id,
+      episodeId: ep._id || (ep as any).id,
+    });
+  };
+
+  const handleNextEpisode = () => {
+    if (hasNextEp) {
+      handleSelectEpisode(episodes[currentEpIndex + 1]);
+    }
+  };
+
+  const handlePrevEpisode = () => {
+    if (hasPrevEp) {
+      handleSelectEpisode(episodes[currentEpIndex - 1]);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!data?.series) return;
+    try {
+      await Share.share({
+        title: data.series.title,
+        message: `Watch ${data.series.title}${
+          data.firstEpisode ? ` - Episode ${data.firstEpisode.episodeNumber}` : ''
+        } on PlayDrama! https://playdrama.app/watch/${id}`,
+      });
+    } catch {
+      // User cancelled
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!token || !data?.series) return;
+    const seriesId = data.series._id || (data.series as any).id || id;
+    const nextState = !isFavorited;
+    setIsFavorited(nextState);
+    try {
+      if (nextState) {
+        await api.watchlist.add({token, webSeriesId: seriesId});
+      } else {
+        await api.watchlist.remove({token, webSeriesId: seriesId});
+      }
+    } catch {
+      setIsFavorited(!nextState);
+    }
+  };
 
   const handleSeek = (newTime: number) => {
     setCurrent(newTime);
@@ -161,7 +257,7 @@ export function PlayerScreen({navigation, route}: Props) {
             ref={videoRef}
             source={{uri: streamUrl}}
             style={StyleSheet.absoluteFill}
-            resizeMode="cover"
+            resizeMode={isFullscreen ? 'cover' : 'contain'}
             paused={!playing}
             volume={1.0}
             onProgress={e => setCurrent(e.currentTime)}
@@ -203,17 +299,47 @@ export function PlayerScreen({navigation, route}: Props) {
               </Text>
             ) : null}
           </View>
-          <Pressable style={styles.iconBtn} hitSlop={8}>
-            <CastIcon size={22} />
-          </Pressable>
+
+          <View style={styles.topRightActions}>
+            <Pressable
+              onPress={handleShare}
+              style={styles.iconBtn}
+              hitSlop={8}>
+              <ShareIcon size={20} />
+            </Pressable>
+            <Pressable
+              onPress={handleToggleFavorite}
+              style={styles.iconBtn}
+              hitSlop={8}>
+              <HeartIcon
+                size={20}
+                color={isFavorited ? colors.brand : colors.textPrimary}
+                filled={isFavorited}
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => setCastModalVisible(true)}
+              style={styles.iconBtn}
+              hitSlop={8}>
+              <CastIcon size={20} />
+            </Pressable>
+          </View>
         </SafeAreaView>
 
         <View style={styles.centerControls}>
           <Pressable
+            onPress={handlePrevEpisode}
+            disabled={!hasPrevEp}
+            style={[styles.sideBtn, !hasPrevEp && styles.disabledBtn]}
+            hitSlop={12}>
+            <PrevEpisodeIcon size={26} color={hasPrevEp ? colors.textPrimary : colors.textMuted} />
+          </Pressable>
+
+          <Pressable
             onPress={() => handleSeek(Math.max(0, current - 10))}
             style={styles.sideBtn}
             hitSlop={12}>
-            <RewindIcon size={30} />
+            <RewindIcon size={28} />
           </Pressable>
 
           <Pressable
@@ -232,7 +358,15 @@ export function PlayerScreen({navigation, route}: Props) {
             onPress={() => handleSeek(Math.min(totalSec, current + 10))}
             style={styles.sideBtn}
             hitSlop={12}>
-            <ForwardIcon size={30} />
+            <ForwardIcon size={28} />
+          </Pressable>
+
+          <Pressable
+            onPress={handleNextEpisode}
+            disabled={!hasNextEp}
+            style={[styles.sideBtn, !hasNextEp && styles.disabledBtn]}
+            hitSlop={12}>
+            <NextEpisodeIcon size={26} color={hasNextEp ? colors.textPrimary : colors.textMuted} />
           </Pressable>
         </View>
 
@@ -262,19 +396,113 @@ export function PlayerScreen({navigation, route}: Props) {
           </View>
 
           <View style={styles.bottomIcons}>
+            {episodes.length > 0 ? (
+              <Pressable
+                onPress={() => setEpisodesModalVisible(true)}
+                style={styles.bottomIconGroup}
+                hitSlop={6}>
+                <EpisodesListIcon size={20} />
+                <Text style={styles.bottomIconLabel}>Episodes ({episodes.length})</Text>
+              </Pressable>
+            ) : null}
             <View style={styles.bottomIconGroup}>
-              <SubtitlesIcon size={20} />
-              <Text style={styles.bottomIconLabel}>UHD HD 4K</Text>
+              <SubtitlesIcon size={18} />
+              <Text style={styles.bottomIconLabel}>UHD 4K</Text>
             </View>
-            <View style={styles.bottomIconGroup}>
-              <Text style={styles.bottomIconLabel}>STEREO</Text>
-            </View>
-            <Pressable style={styles.bottomIconGroup} hitSlop={6}>
-              <ExpandIcon size={20} />
+            <Pressable
+              onPress={() => setIsFullscreen(v => !v)}
+              style={styles.bottomIconGroup}
+              hitSlop={6}>
+              <ExpandIcon size={20} color={isFullscreen ? colors.brand : colors.textPrimary} />
             </Pressable>
           </View>
         </SafeAreaView>
       </Animated.View>
+
+      {/* Episodes List Modal */}
+      <Modal
+        visible={episodesModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEpisodesModalVisible(false)}>
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setEpisodesModalVisible(false)}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Episodes</Text>
+              <Pressable
+                onPress={() => setEpisodesModalVisible(false)}
+                hitSlop={8}>
+                <CloseIcon size={20} />
+              </Pressable>
+            </View>
+            <FlatList
+              data={episodes}
+              keyExtractor={(item, idx) => item._id || (item as any).id || `ep-${idx}`}
+              renderItem={({item}) => {
+                const isActive =
+                  (item._id || (item as any).id) ===
+                  (firstEpisode?._id || (firstEpisode as any)?.id);
+                return (
+                  <Pressable
+                    onPress={() => handleSelectEpisode(item)}
+                    style={[styles.modalEpRow, isActive && styles.modalEpRowActive]}>
+                    <Image
+                      source={{uri: item.thumbnail || backdrop}}
+                      style={styles.modalEpThumb}
+                    />
+                    <View style={styles.modalEpBody}>
+                      <Text
+                        style={[
+                          styles.modalEpTitle,
+                          isActive && styles.modalEpTitleActive,
+                        ]}>
+                        Episode {item.episodeNumber}: {item.title}
+                      </Text>
+                      {item.description ? (
+                        <Text style={styles.modalEpDesc} numberOfLines={2}>
+                          {item.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                    {isActive ? (
+                      <View style={styles.playingBadge}>
+                        <Text style={styles.playingBadgeText}>PLAYING</Text>
+                      </View>
+                    ) : null}
+                  </Pressable>
+                );
+              }}
+            />
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Cast Modal */}
+      <Modal
+        visible={castModalVisible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setCastModalVisible(false)}>
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setCastModalVisible(false)}>
+          <View style={styles.castModalContent}>
+            <CastIcon size={36} color={colors.brand} />
+            <Text style={styles.castTitle}>Connect to a Device</Text>
+            <Text style={styles.castDesc}>
+              Searching for Chromecast or AirPlay TVs on your network...
+            </Text>
+            <ActivityIndicator color={colors.brand} style={{marginTop: 12}} />
+            <Pressable
+              onPress={() => setCastModalVisible(false)}
+              style={styles.castCloseBtn}>
+              <Text style={styles.castCloseText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -302,144 +530,238 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  retryText: {color: colors.brandText, fontSize: 14, fontWeight: '700'},
+  retryText: {
+    color: colors.brandText,
+    fontSize: 14,
+    fontWeight: '700',
+  },
   backLink: {padding: spacing.sm},
   backText: {color: colors.textMuted, fontSize: 13},
   backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFill,
     width: '100%',
     height: '100%',
-    opacity: 0.85,
   },
   dim: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.xs,
     gap: spacing.md,
   },
+  topTitleWrap: {flex: 1},
+  topTitle: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  topSub: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  topRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
-  topTitleWrap: {flex: 1, alignItems: 'center'},
-  topTitle: {color: colors.textPrimary, fontSize: 14, fontWeight: '700'},
-  topSub: {color: colors.textMuted, fontSize: 11, marginTop: 2},
   centerControls: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 44,
+    gap: spacing.md,
   },
   sideBtn: {
-    width: 56,
-    height: 56,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  disabledBtn: {
+    opacity: 0.3,
   },
   playBtn: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.brand,
-    shadowOpacity: 0.6,
-    shadowRadius: 30,
-    shadowOffset: {width: 0, height: 10},
-    elevation: 12,
   },
   notReady: {
-    position: 'absolute',
-    bottom: 140,
-    left: spacing.md,
-    right: spacing.md,
     alignItems: 'center',
+    marginBottom: spacing.md,
   },
   notReadyText: {
-    color: colors.textPrimary,
-    fontSize: 12,
-    opacity: 0.85,
-    textAlign: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
+    color: colors.textMuted,
+    fontSize: 13,
   },
   bottomBar: {
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
+    gap: spacing.sm,
   },
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginBottom: spacing.md,
   },
   time: {
-    color: colors.textPrimary,
+    color: colors.textMuted,
     fontSize: 12,
     fontVariant: ['tabular-nums'],
-    minWidth: 50,
-    textAlign: 'center',
   },
   track: {
     flex: 1,
-    height: 3,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 3,
+    justifyContent: 'center',
   },
   trackFill: {
-    height: 3,
+    height: '100%',
+    borderRadius: 2,
     backgroundColor: colors.brand,
-    borderRadius: 3,
   },
   thumb: {
     position: 'absolute',
-    top: -5,
-    marginLeft: -6,
-    width: 13,
-    height: 13,
-    borderRadius: 7,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: colors.brand,
-    shadowColor: colors.brand,
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
+    marginTop: -4,
   },
   bottomIcons: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
   },
   bottomIconGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 4,
   },
   bottomIconLabel: {
     color: colors.textPrimary,
-    fontSize: 10,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    maxHeight: '60%',
+    padding: spacing.md,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+    paddingBottom: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  modalTitle: {
+    color: colors.textPrimary,
+    fontSize: 17,
     fontWeight: '700',
-    letterSpacing: 1,
-    opacity: 0.9,
+  },
+  modalEpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    gap: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  modalEpRowActive: {
+    backgroundColor: 'rgba(156,39,176,0.15)',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.xs,
+  },
+  modalEpThumb: {
+    width: 80,
+    height: 50,
+    borderRadius: radius.sm,
+    backgroundColor: '#222',
+  },
+  modalEpBody: {
+    flex: 1,
+  },
+  modalEpTitle: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalEpTitleActive: {
+    color: colors.brand,
+    fontWeight: '700',
+  },
+  modalEpDesc: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  playingBadge: {
+    backgroundColor: colors.brand,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  playingBadgeText: {
+    color: colors.brandText,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  castModalContent: {
+    margin: spacing.xl,
+    padding: spacing.xl,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  castTitle: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: spacing.xs,
+  },
+  castDesc: {
+    color: colors.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  castCloseBtn: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+  },
+  castCloseText: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

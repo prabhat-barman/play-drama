@@ -18,7 +18,7 @@ export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
   MovieDetails: {id: string};
-  Player: {id: string};
+  Player: {id: string; episodeId?: string};
   Notifications: undefined;
   ChangePassword: undefined;
 };
@@ -67,7 +67,7 @@ export function RootNavigator() {
           <Stack.Screen
             name="Player"
             component={PlayerScreen}
-            options={{animation: 'fade', orientation: 'portrait'}}
+            options={{animation: 'fade', orientation: 'all'}}
           />
           <Stack.Screen
             name="Notifications"

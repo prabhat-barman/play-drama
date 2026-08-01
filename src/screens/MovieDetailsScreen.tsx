@@ -4,6 +4,7 @@ import {
   Image,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -180,6 +181,18 @@ export function MovieDetailsScreen({navigation, route}: Props) {
 
   const cast = movie.cast ?? [];
 
+  const handleShare = async () => {
+    if (!movie) return;
+    try {
+      await Share.share({
+        title: movie.title,
+        message: `Watch ${movie.title} on PlayDrama! https://playdrama.app/movie/${movie.id}`,
+      });
+    } catch {
+      // Silently ignore share cancel
+    }
+  };
+
   return (
     <View style={styles.root}>
       <ScrollView
@@ -209,7 +222,7 @@ export function MovieDetailsScreen({navigation, route}: Props) {
               <ChevronLeftIcon />
             </Pressable>
             <View style={styles.heroRightRow}>
-              <Pressable style={styles.iconBtn} hitSlop={8}>
+              <Pressable onPress={handleShare} style={styles.iconBtn} hitSlop={8}>
                 <ShareIcon size={20} />
               </Pressable>
               <Pressable
@@ -358,7 +371,10 @@ export function MovieDetailsScreen({navigation, route}: Props) {
                 <Pressable
                   key={e._id}
                   onPress={() =>
-                    navigation.navigate('Player', {id: movie.id})
+                    navigation.navigate('Player', {
+                      id: movie.id,
+                      episodeId: e._id || (e as any).id,
+                    })
                   }
                   style={styles.epRow}>
                   <View style={styles.epThumbWrap}>
