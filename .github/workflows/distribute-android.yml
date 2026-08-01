@@ -69,6 +69,7 @@ jobs:
       - name: Distribute to Firebase App Distribution
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
         run: |
           if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
             echo "::error::Missing FIREBASE_SERVICE_ACCOUNT secret. See DISTRIBUTION.md."
@@ -90,9 +91,10 @@ jobs:
           '
           echo "------------------------------------"
 
+          APP_ID="${FIREBASE_ANDROID_APP_ID:-1:55460051377:android:44de0ae4a092b408a6e590}"
           npx --yes firebase-tools appdistribution:distribute \
             android/app/build/outputs/apk/release/app-release.apk \
-            --app 1:55460051377:android:44de0ae4a092b408a6e590 \
+            --app "$APP_ID" \
             --release-notes-file "$RUNNER_TEMP/release-notes.txt" \
             --groups testers
 
