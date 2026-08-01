@@ -57,7 +57,7 @@ jobs:
       - name: Generate release notes from git
         run: |
           {
-            echo "CineStream — automated build from main"
+            echo "PlayDrama — automated build from main"
             echo ""
             echo "Latest commit:"
             git log -1 --pretty=format:"  %h %s%n%n%b"
