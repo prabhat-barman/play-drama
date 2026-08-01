@@ -82,7 +82,7 @@ android {
 
     namespace "com.playdrama"
     defaultConfig {
-        applicationId "com.playdrama"
+        applicationId "com.cinestream"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 2
