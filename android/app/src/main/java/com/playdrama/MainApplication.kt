@@ -1,4 +1,4 @@
-package com.cinestream
+package com.playdrama
 
 import android.app.Application
 import com.facebook.react.PackageList

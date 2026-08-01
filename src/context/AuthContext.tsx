@@ -32,9 +32,9 @@ import {
   unregisterDeviceFromPush,
 } from '../lib/pushNotifications';
 
-const ACCESS_KEY = 'cinestream.auth.accessToken';
-const REFRESH_KEY = 'cinestream.auth.refreshToken';
-const USER_KEY = 'cinestream.auth.user';
+const ACCESS_KEY = 'playdrama.auth.accessToken';
+const REFRESH_KEY = 'playdrama.auth.refreshToken';
+const USER_KEY = 'playdrama.auth.user';
 
 type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated';
 

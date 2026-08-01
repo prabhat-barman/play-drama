@@ -36,7 +36,7 @@ export type NotificationTapHandler = (payload: NotificationTapPayload) => void;
 // Constants
 // ------------------------------
 
-const CHANNEL_ID = 'cinestream-default';
+const CHANNEL_ID = 'playdrama-default';
 const CHANNEL_NAME = 'General notifications';
 
 // ------------------------------

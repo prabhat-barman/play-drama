@@ -39,8 +39,8 @@ export function AppUpdateModal({
     const url =
       storeUrl ||
       Platform.select({
-        ios: 'https://apps.apple.com/app/cinestream/id123456789',
-        android: 'https://play.google.com/store/apps/details?id=com.cinestream',
+        ios: 'https://apps.apple.com/app/playdrama/id123456789',
+        android: 'https://play.google.com/store/apps/details?id=com.playdrama',
       });
     if (url) {
       Linking.openURL(url).catch(() => {});

@@ -1,4 +1,4 @@
-# Vertical / CineStream — Backend API Handoff
+# Vertical / PlayDrama — Backend API Handoff
 
 > **Audience:** Backend team owning `vertical-admin-backend`
 > **Deliverable spec:** [`docs/API_ROADMAP.yaml`](./API_ROADMAP.yaml) (OpenAPI 3.1)

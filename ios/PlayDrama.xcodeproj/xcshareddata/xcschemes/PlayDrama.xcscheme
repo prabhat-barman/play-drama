@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "CineStream.app"
-               BlueprintName = "CineStream"
-               ReferencedContainer = "container:CineStream.xcodeproj">
+               BuildableName = "PlayDrama.app"
+               BlueprintName = "PlayDrama"
+               ReferencedContainer = "container:PlayDrama.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "CineStreamTests.xctest"
-               BlueprintName = "CineStreamTests"
-               ReferencedContainer = "container:CineStream.xcodeproj">
+               BuildableName = "PlayDramaTests.xctest"
+               BlueprintName = "PlayDramaTests"
+               ReferencedContainer = "container:PlayDrama.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "CineStream.app"
-            BlueprintName = "CineStream"
-            ReferencedContainer = "container:CineStream.xcodeproj">
+            BuildableName = "PlayDrama.app"
+            BlueprintName = "PlayDrama"
+            ReferencedContainer = "container:PlayDrama.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "CineStream.app"
-            BlueprintName = "CineStream"
-            ReferencedContainer = "container:CineStream.xcodeproj">
+            BuildableName = "PlayDrama.app"
+            BlueprintName = "PlayDrama"
+            ReferencedContainer = "container:PlayDrama.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

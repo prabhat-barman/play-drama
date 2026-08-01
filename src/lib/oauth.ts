@@ -154,7 +154,7 @@ export async function signInWithGoogleNative(): Promise<GoogleIdTokenResult> {
     // DEVELOPER_ERROR (code 10 on Android) is almost always a misconfigured
     // OAuth client — usually one of:
     //   1. SHA-1 of the signing keystore not registered in Google Cloud /
-    //      Firebase console for this package (com.cinestream).
+    //      Firebase console for this package (com.playdrama).
     //   2. `webClientId` in src/lib/config.ts belongs to a different Google
     //      Cloud project than the one the Android app is registered in.
     //   3. `google-services.json` is stale — re-download after adding SHA-1.

@@ -401,7 +401,7 @@ function routeFromNotification(
     return;
   }
   if (n.deepLink) {
-    const match = /^cinestream:\/\/([^/]+)\/([^?#]+)/.exec(n.deepLink);
+    const match = /^playdrama:\/\/([^/]+)\/([^?#]+)/.exec(n.deepLink);
     if (match) {
       const [, kind, id] = match;
       if (kind === 'webseries') {

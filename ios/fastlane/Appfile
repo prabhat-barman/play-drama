@@ -1,4 +1,4 @@
-app_identifier("com.cinestream") # The bundle identifier of your app
+app_identifier("com.playdrama") # The bundle identifier of your app
 
 # Uncomment and fill these once the Apple Developer Program is active.
 # These are only needed for the `testflight` lane (App Store Connect upload).

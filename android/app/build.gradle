@@ -80,9 +80,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.cinestream"
+    namespace "com.playdrama"
     defaultConfig {
-        applicationId "com.cinestream"
+        applicationId "com.playdrama"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 2

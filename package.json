@@ -1,5 +1,5 @@
 {
-  "name": "CineStream",
+  "name": "PlayDrama",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -53,6 +53,11 @@
     "prettier": "2.8.8",
     "react-test-renderer": "19.2.3",
     "typescript": "^5.8.3"
+  },
+  "overrides": {
+    "@opentelemetry/core": "^2.8.0",
+    "fast-xml-parser": "^5.7.0",
+    "uuid": "^11.1.1"
   },
   "engines": {
     "node": ">= 22.11.0"

@@ -30,12 +30,12 @@
         </intent-filter>
         <!-- Deep-link handler for tapped push notifications. FCM tap sends
              an intent-launch with the app's launcher activity; we accept the
-             cinestream://... scheme so index.js can route it. -->
+             playdrama://... scheme so index.js can route it. -->
         <intent-filter android:autoVerify="false">
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.DEFAULT" />
             <category android:name="android.intent.category.BROWSABLE" />
-            <data android:scheme="cinestream" />
+            <data android:scheme="playdrama" />
         </intent-filter>
       </activity>
 
@@ -53,7 +53,7 @@
           tools:replace="android:resource" />
       <meta-data
           android:name="com.google.firebase.messaging.default_notification_channel_id"
-          android:value="cinestream-default"
+          android:value="playdrama-default"
           tools:replace="android:value" />
     </application>
 </manifest>

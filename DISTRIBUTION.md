@@ -1,15 +1,15 @@
 # Beta distribution — Firebase App Distribution + TestFlight
 
-CineStream distributes beta builds two ways:
+PlayDrama distributes beta builds two ways:
 
 - **Android** → [Firebase App Distribution](https://firebase.google.com/products/app-distribution) (no paid Google Play Console account needed).
 - **iOS** → Firebase App Distribution *(recommended for internal testing)* **or** Apple TestFlight *(recommended once the app is closer to store submission)*.
 
 | Info | Value |
 | --- | --- |
-| Firebase project | **cinestream-1464c** |
+| Firebase project | **playdrama-1464c** |
 | Android app ID | **1:55460051377:android:44de0ae4a092b408a6e590** |
-| iOS bundle id | **com.cinestream** |
+| iOS bundle id | **com.playdrama** |
 | iOS Firebase app ID | *(create in Firebase console — see [iOS setup](#ios-distribution) below)* |
 
 ---
@@ -42,7 +42,7 @@ the Firebase project (or that has "App Distribution Admin" access on it).
 
 #### 2. Create the "testers" group (once per Firebase project)
 
-1. Open <https://console.firebase.google.com/project/cinestream-1464c/appdistribution>
+1. Open <https://console.firebase.google.com/project/playdrama-1464c/appdistribution>
 2. Go to the **Testers & Groups** tab.
 3. Click **Add group** → name it **`testers`** exactly.
 4. Add tester emails (one per line). Each tester will get an invite
@@ -99,7 +99,7 @@ JSON key**. Steps:
 #### 1. Create the service account
 
 1. Open the Google Cloud Console for this Firebase project:
-   <https://console.cloud.google.com/iam-admin/serviceaccounts?project=cinestream-1464c>
+   <https://console.cloud.google.com/iam-admin/serviceaccounts?project=playdrama-1464c>
 2. Click **Create service account**.
    - Name: `github-actions-app-distribution`
    - ID: leave auto-generated.
@@ -120,7 +120,7 @@ JSON key**. Steps:
 #### 3. Add it as a GitHub secret
 
 1. Open the repo on GitHub:
-   <https://github.com/prabhat-barman/CineStream/settings/secrets/actions>
+   <https://github.com/prabhat-barman/PlayDrama/settings/secrets/actions>
 2. **New repository secret**.
    - Name: `FIREBASE_SERVICE_ACCOUNT`
    - Value: paste the **entire JSON file contents**.
@@ -129,7 +129,7 @@ JSON key**. Steps:
 #### 4. Verify the `testers` group exists in Firebase
 
 The workflow ships to the `testers` group. Create it once at
-<https://console.firebase.google.com/project/cinestream-1464c/appdistribution>
+<https://console.firebase.google.com/project/playdrama-1464c/appdistribution>
 under **Testers & Groups → Add group**, name it exactly `testers`,
 and add tester emails. Without this group the CI step fails with a
 404 at the "distributing to testers/groups" line.
@@ -181,16 +181,16 @@ Three lanes are wired up out of the box:
 Common to all three lanes:
 
 1. **macOS + Xcode 15+** (Xcode 15.4 recommended). Fastlane cannot build iOS on Linux/Windows.
-2. **Ruby + Bundler** already installed (the same setup CocoaPods needs). From `CineStream/` run once:
+2. **Ruby + Bundler** already installed (the same setup CocoaPods needs). From `PlayDrama/` run once:
    ```bash
    bundle install
    ```
    This installs `fastlane` alongside `cocoapods`.
 3. **Firebase project has an iOS app registered** *(needed for `simulator` + `beta`)*:
-   - Open <https://console.firebase.google.com/project/cinestream-1464c/settings/general>.
+   - Open <https://console.firebase.google.com/project/playdrama-1464c/settings/general>.
    - Under **Your apps** click **Add app → iOS+**.
-   - Bundle ID: `com.cinestream` (must match exactly).
-   - App nickname: `CineStream iOS`.
+   - Bundle ID: `com.playdrama` (must match exactly).
+   - App nickname: `PlayDrama iOS`.
    - Skip the "Download GoogleService-Info.plist" step for now — App Distribution does not need the SDK to be integrated.
    - Copy the resulting app id (`1:55460051377:ios:xxxxxxxxxxx`). This becomes the `FIREBASE_IOS_APP_ID` env var / repo secret.
 4. **CocoaPods installed** for the current native modules:
@@ -208,15 +208,15 @@ Great for internal review before signing/certs are ready. **No env vars required
 npm run distribute:ios:simulator
 ```
 
-Under the hood: `xcodebuild build -sdk iphonesimulator` → `ditto -c -k` produces `ios/fastlane/build/CineStream-simulator.zip`.
+Under the hood: `xcodebuild build -sdk iphonesimulator` → `ditto -c -k` produces `ios/fastlane/build/PlayDrama-simulator.zip`.
 
-The zip contains a `CineStream.app` bundle. Testers (Mac only) install it into a booted simulator with:
+The zip contains a `PlayDrama.app` bundle. Testers (Mac only) install it into a booted simulator with:
 
 ```bash
-unzip CineStream-simulator.zip
+unzip PlayDrama-simulator.zip
 open -a Simulator                          # boot the default simulator
-xcrun simctl install booted CineStream.app # install
-xcrun simctl launch  booted com.cinestream  # launch
+xcrun simctl install booted PlayDrama.app # install
+xcrun simctl launch  booted com.playdrama  # launch
 ```
 
 In CI, the same zip is uploaded as an artifact named **`ios-simulator-<sha>`** on every workflow run. Testers can grab it directly from the run summary page on GitHub. No Firebase account, no Apple ID, no email invites needed.
@@ -226,7 +226,7 @@ In CI, the same zip is uploaded as an artifact named **`ios-simulator-<sha>`** o
 Prereqs *(one-time)*:
 
 - An **Apple Distribution certificate** installed in your Mac's login keychain (or as a `.p12` file — see the [CI section](#ci-github-actions-for-ios) below).
-- An **Ad Hoc provisioning profile** for `com.cinestream` that includes every test-device UDID. Create it at <https://developer.apple.com/account/resources/profiles/list>. Fastlane will install it automatically when you run the lane.
+- An **Ad Hoc provisioning profile** for `com.playdrama` that includes every test-device UDID. Create it at <https://developer.apple.com/account/resources/profiles/list>. Fastlane will install it automatically when you run the lane.
 - All tester devices registered under **Devices** in the Apple Developer portal.
 
 Then:
@@ -243,10 +243,10 @@ Testers get a Firebase invite email, install the **Firebase App Tester** iOS app
 Prereqs *(one-time)*:
 
 1. **Apple Developer Program active** ($99/year — <https://developer.apple.com/programs/enroll/>).
-2. **App record created in App Store Connect** at <https://appstoreconnect.apple.com/apps> with bundle id `com.cinestream`.
+2. **App record created in App Store Connect** at <https://appstoreconnect.apple.com/apps> with bundle id `com.playdrama`.
 3. **App Store Connect API key** *(recommended over Apple ID auth — no 2FA prompts, works headless)*:
    - Open <https://appstoreconnect.apple.com/access/integrations/api>.
-   - Click the **+** next to *Active*. Name: `CineStream CI`. Access: **App Manager**.
+   - Click the **+** next to *Active*. Name: `PlayDrama CI`. Access: **App Manager**.
    - Download the `.p8` file — **you only get one chance to download it**, store it in a password manager.
    - Note the **Key ID** and **Issuer ID** shown on the same page.
 4. An **App Store distribution certificate** + **App Store provisioning profile** installed on your Mac (same story as ad-hoc but for the `app-store` export method).
@@ -274,12 +274,12 @@ Add the following under **Settings → Secrets and variables → Actions**:
 
 | Secret | Used by lane | How to get it |
 | --- | --- | --- |
-| `FIREBASE_IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64` | **all** (`simulator`, `beta`, `testflight`) | `ios/CineStream/GoogleService-Info.plist` is `.gitignore`d, so CI has to recreate it before Xcode's "Copy Bundle Resources" phase runs. Encode your local copy once: `base64 -i ios/CineStream/GoogleService-Info.plist \| pbcopy`. If you don't have it locally, download from <https://console.firebase.google.com/project/cinestream-1464c/settings/general> → iOS app → `GoogleService-Info.plist`. |
+| `FIREBASE_IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64` | **all** (`simulator`, `beta`, `testflight`) | `ios/PlayDrama/GoogleService-Info.plist` is `.gitignore`d, so CI has to recreate it before Xcode's "Copy Bundle Resources" phase runs. Encode your local copy once: `base64 -i ios/PlayDrama/GoogleService-Info.plist \| pbcopy`. If you don't have it locally, download from <https://console.firebase.google.com/project/playdrama-1464c/settings/general> → iOS app → `GoogleService-Info.plist`. |
 | `FIREBASE_SERVICE_ACCOUNT` | `beta` | Already set up for Android — reused as-is. |
 | `FIREBASE_IOS_APP_ID` | `beta` | The `1:...:ios:...` string shown in Firebase console after registering the iOS app. |
 | `IOS_DIST_CERT_P12_BASE64` | `beta`, `testflight` | Export your distribution cert from Keychain Access → *Certificates* → right-click → *Export* → `.p12`. Then `base64 -i cert.p12 \| pbcopy`. |
 | `IOS_DIST_CERT_PASSWORD` | `beta`, `testflight` | The password you set when exporting the `.p12`. |
-| `IOS_ADHOC_PROVISION_PROFILE_BASE64` | `beta` | `base64 -i CineStream_AdHoc.mobileprovision \| pbcopy` after downloading the profile from the Apple Developer portal. |
+| `IOS_ADHOC_PROVISION_PROFILE_BASE64` | `beta` | `base64 -i PlayDrama_AdHoc.mobileprovision \| pbcopy` after downloading the profile from the Apple Developer portal. |
 | `IOS_APPSTORE_PROVISION_PROFILE_BASE64` | `testflight` | Same as above but for the *App Store* profile. |
 | `IOS_KEYCHAIN_PASSWORD` | `beta`, `testflight` | Any random string — used to unlock the temporary keychain fastlane creates on the runner. |
 | `APP_STORE_CONNECT_API_KEY_ID` | `testflight` | The 10-char Key ID shown in App Store Connect. |
@@ -307,7 +307,7 @@ launch**. Steps:
    ```bash
    keytool -genkeypair -v -storetype PKCS12 \
      -keystore android/app/release.keystore \
-     -alias cinestream-release -keyalg RSA -keysize 2048 -validity 10000
+     -alias playdrama-release -keyalg RSA -keysize 2048 -validity 10000
    ```
 
 2. Store the passwords in `~/.gradle/gradle.properties` (never in
@@ -315,7 +315,7 @@ launch**. Steps:
 
    ```
    CINESTREAM_UPLOAD_STORE_FILE=release.keystore
-   CINESTREAM_UPLOAD_KEY_ALIAS=cinestream-release
+   CINESTREAM_UPLOAD_KEY_ALIAS=playdrama-release
    CINESTREAM_UPLOAD_STORE_PASSWORD=...
    CINESTREAM_UPLOAD_KEY_PASSWORD=...
    ```
@@ -326,7 +326,7 @@ launch**. Steps:
 4. Extract the release SHA-1:
 
    ```bash
-   keytool -list -v -alias cinestream-release -keystore android/app/release.keystore
+   keytool -list -v -alias playdrama-release -keystore android/app/release.keystore
    ```
 
 5. Register that SHA-1 in the Google Cloud Console (under the same

@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Vertical / CineStream — Mobile API Roadmap
+  title: Vertical / PlayDrama — Mobile API Roadmap
   version: 0.1.0-draft
   description: |
     Draft contract for endpoints the mobile app needs but that are not yet

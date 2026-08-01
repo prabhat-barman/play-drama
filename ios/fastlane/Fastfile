@@ -3,7 +3,7 @@ require 'fileutils'
 require 'securerandom'
 require 'tmpdir'
 
-# Fastlane config for CineStream iOS distribution.
+# Fastlane config for PlayDrama iOS distribution.
 #
 # Lanes:
 #   fastlane ios beta         → Ad-hoc IPA → Firebase App Distribution
@@ -16,12 +16,12 @@ require 'tmpdir'
 
 default_platform(:ios)
 
-APP_IDENTIFIER        = 'com.cinestream'
-XCODE_SCHEME          = 'CineStream'
-XCODE_PROJECT         = 'CineStream.xcodeproj'
-XCODE_WORKSPACE       = 'CineStream.xcworkspace'
+APP_IDENTIFIER        = 'com.playdrama'
+XCODE_SCHEME          = 'PlayDrama'
+XCODE_PROJECT         = 'PlayDrama.xcodeproj'
+XCODE_WORKSPACE       = 'PlayDrama.xcworkspace'
 # Absolute paths — fastlane runs `sh(...)` commands from ios/fastlane/, so
-# relative paths like 'CineStream.xcworkspace' resolve incorrectly. Actions
+# relative paths like 'PlayDrama.xcworkspace' resolve incorrectly. Actions
 # like `build_app` (gym) auto-detect, but raw `sh` calls need the full path.
 IOS_ROOT              = File.expand_path('..', __dir__)
 XCODE_WORKSPACE_PATH  = File.join(IOS_ROOT, XCODE_WORKSPACE)
@@ -55,10 +55,10 @@ platform :ios do
     missing << 'IOS_DIST_CERT_PASSWORD'   if cert_pw.to_s.empty?
     missing << profile_env_key            if profile_b64.to_s.empty?
     unless missing.empty?
-      UI.user_error!("Missing required CI signing secrets: #{missing.join(', ')}. See CineStream/DISTRIBUTION.md → 'iOS CI secrets'.")
+      UI.user_error!("Missing required CI signing secrets: #{missing.join(', ')}. See PlayDrama/DISTRIBUTION.md → 'iOS CI secrets'.")
     end
 
-    keychain_name = 'cinestream-ci.keychain-db'
+    keychain_name = 'playdrama-ci.keychain-db'
     keychain_pw   = ENV['IOS_KEYCHAIN_PASSWORD'] || SecureRandom.hex(16)
 
     create_keychain(
@@ -103,7 +103,7 @@ platform :ios do
     if File.exist?(RELEASE_NOTES)
       File.read(RELEASE_NOTES)
     else
-      "CineStream iOS beta build #{Time.now.utc.iso8601}"
+      "PlayDrama iOS beta build #{Time.now.utc.iso8601}"
     end
   end
 
@@ -123,14 +123,14 @@ platform :ios do
       export_method:          'ad-hoc',
       clean:                  true,
       output_directory:       BUILD_DIR,
-      output_name:            'CineStream.ipa',
+      output_name:            'PlayDrama.ipa',
       derived_data_path:      DERIVED_DATA_DIR,
       silent:                 true,
       skip_profile_detection: false
     )
 
     firebase_app_id = ENV['FIREBASE_IOS_APP_ID']
-    UI.user_error!('Missing FIREBASE_IOS_APP_ID env var (register the iOS app in the Firebase console, then export the "1:...:ios:..." ID). See CineStream/DISTRIBUTION.md.') if firebase_app_id.to_s.empty?
+    UI.user_error!('Missing FIREBASE_IOS_APP_ID env var (register the iOS app in the Firebase console, then export the "1:...:ios:..." ID). See PlayDrama/DISTRIBUTION.md.') if firebase_app_id.to_s.empty?
 
     groups   = ENV['FIREBASE_TESTER_GROUPS'] || 'testers'
     ipa_path = lane_context[SharedValues::IPA_OUTPUT_PATH]
@@ -146,7 +146,7 @@ platform :ios do
     )
   end
 
-  desc 'Build an *unsigned* iOS Simulator .app, zip it, and expose it as a build artifact for Mac testers. No Apple Developer account needed. Firebase App Distribution intentionally does *not* accept simulator builds (only signed IPAs for real devices), so distribution here is via the GitHub Actions run artifact — testers grab CineStream-simulator.zip from the run summary and `xcrun simctl install booted CineStream.app`.'
+  desc 'Build an *unsigned* iOS Simulator .app, zip it, and expose it as a build artifact for Mac testers. No Apple Developer account needed. Firebase App Distribution intentionally does *not* accept simulator builds (only signed IPAs for real devices), so distribution here is via the GitHub Actions run artifact — testers grab PlayDrama-simulator.zip from the run summary and `xcrun simctl install booted PlayDrama.app`.'
   lane :simulator do
     bump_build_number
 
@@ -176,7 +176,7 @@ platform :ios do
     sh('ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', app_path, zip_path)
 
     # Write release notes alongside the zip so it's easy to identify the build.
-    notes      = read_release_notes + "\n\n(iOS Simulator build — Mac testers only. Install with `xcrun simctl install booted CineStream.app`.)"
+    notes      = read_release_notes + "\n\n(iOS Simulator build — Mac testers only. Install with `xcrun simctl install booted PlayDrama.app`.)"
     notes_file = File.join(BUILD_DIR, 'release-notes.txt')
     File.write(notes_file, notes)
 
@@ -187,10 +187,10 @@ platform :ios do
     UI.message('')
     UI.message('In CI, this file is uploaded as the run artifact "ios-simulator-<sha>".')
     UI.message('Testers download it from the GitHub Actions run summary page, then:')
-    UI.message('  1. unzip CineStream-simulator.zip')
+    UI.message('  1. unzip PlayDrama-simulator.zip')
     UI.message('  2. open -a Simulator      # boots the default simulator')
-    UI.message('  3. xcrun simctl install booted CineStream.app')
-    UI.message('  4. xcrun simctl launch booted com.cinestream')
+    UI.message('  3. xcrun simctl install booted PlayDrama.app')
+    UI.message('  4. xcrun simctl launch booted com.playdrama')
   end
 
   desc 'Build a signed App-Store IPA and upload it to TestFlight via App Store Connect API key.'
@@ -206,7 +206,7 @@ platform :ios do
     missing << 'APP_STORE_CONNECT_API_ISSUER_ID'          if api_issuer_id.to_s.empty?
     missing << 'APP_STORE_CONNECT_API_KEY_CONTENT_BASE64' if api_key_content.to_s.empty?
     unless missing.empty?
-      UI.user_error!("Missing required App Store Connect API secrets: #{missing.join(', ')}. See CineStream/DISTRIBUTION.md → 'TestFlight secrets'.")
+      UI.user_error!("Missing required App Store Connect API secrets: #{missing.join(', ')}. See PlayDrama/DISTRIBUTION.md → 'TestFlight secrets'.")
     end
 
     api_key = app_store_connect_api_key(
@@ -224,7 +224,7 @@ platform :ios do
       export_method:     'app-store',
       clean:             true,
       output_directory:  BUILD_DIR,
-      output_name:       'CineStream.ipa',
+      output_name:       'PlayDrama.ipa',
       derived_data_path: DERIVED_DATA_DIR,
       silent:            true
     )

@@ -1,4 +1,6 @@
 {
+  "java.jdt.ls.java.home": "/Users/prabhatbarman/.local/jdk17/Contents/Home",
+  "java.home": "/Users/prabhatbarman/.local/jdk17/Contents/Home",
   "mcpServers": {
     "Figma": {
       "url": "https://mcp.figma.com/mcp"

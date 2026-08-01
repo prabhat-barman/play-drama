@@ -14,7 +14,7 @@ import {Platform} from 'react-native';
  *   install, which is all the backend needs to correlate device tokens.
  */
 
-const DEVICE_ID_KEY = 'cinestream.device.id';
+const DEVICE_ID_KEY = 'playdrama.device.id';
 
 // Small, self-contained UUIDv4. We deliberately avoid the `uuid` package.
 function uuidv4(): string {
