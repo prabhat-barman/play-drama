@@ -46,6 +46,12 @@ const HERO_TABS = ['Movies', 'TV Shows', 'Categories'] as const;
 type HeroTab = (typeof HERO_TABS)[number];
 
 type HomePayload = {
+  trending: ContentItem[];
+  newReleases: ContentItem[];
+  topRated: ContentItem[];
+  recommended: ContentItem[];
+  recentlyAdded: ContentItem[];
+  popularDramas: ContentItem[];
   latest: ContentItem[];
   action: ContentItem[];
   drama: ContentItem[];
@@ -59,12 +65,32 @@ export function HomeScreen({navigation}: Props) {
   const fetchHome = useCallback(
     async (signal: AbortSignal): Promise<HomePayload> => {
       if (!token) {
-        return {latest: [], action: [], drama: []};
+        return {
+          trending: [],
+          newReleases: [],
+          topRated: [],
+          recommended: [],
+          recentlyAdded: [],
+          popularDramas: [],
+          latest: [],
+          action: [],
+          drama: [],
+        };
       }
-      // Parallel fetches — the retry / refresh pipeline in api.ts handles
-      // transient failures. Individual genre calls that fail simply return
-      // an empty section rather than tanking the whole screen.
-      const [latestRes, actionRes, dramaRes] = await Promise.allSettled([
+      // Fetch /home API feeds in parallel along with genre fallbacks
+      const [
+        homeFeedRes,
+        trendingRes,
+        newReleasesRes,
+        popularDramasRes,
+        latestRes,
+        actionRes,
+        dramaRes,
+      ] = await Promise.allSettled([
+        api.home.get({token, signal}),
+        api.home.trending({token, signal}),
+        api.home.newReleases({token, signal}),
+        api.home.popularDramas({token, signal}),
         api.webseries.list({token, status: 'PUBLISHED', limit: 20, signal}),
         api.webseries.list({
           token,
@@ -81,14 +107,82 @@ export function HomeScreen({navigation}: Props) {
           signal,
         }),
       ]);
-      const unwrap = (
-        r: PromiseSettledResult<Awaited<ReturnType<typeof api.webseries.list>>>,
-      ): ContentItem[] =>
-        r.status === 'fulfilled' ? r.value.data.map(webseriesToContent) : [];
+
+      const unwrapSeries = (r: PromiseSettledResult<any>): ContentItem[] =>
+        r.status === 'fulfilled' && Array.isArray(r.value)
+          ? r.value.map(webseriesToContent)
+          : r.status === 'fulfilled' && Array.isArray(r.value?.data)
+          ? r.value.data.map(webseriesToContent)
+          : [];
+
+      const unwrapList = (r: PromiseSettledResult<any>): ContentItem[] =>
+        r.status === 'fulfilled' && r.value?.data
+          ? (Array.isArray(r.value.data) ? r.value.data : r.value.data.data ?? []).map(webseriesToContent)
+          : [];
+
+      const trendingFromApi = unwrapSeries(trendingRes);
+      const newReleasesFromApi = unwrapSeries(newReleasesRes);
+      const popularDramasFromApi = unwrapSeries(popularDramasRes);
+      const latestItems = unwrapList(latestRes);
+
+      const rawHome = homeFeedRes.status === 'fulfilled' ? homeFeedRes.value : null;
+      const homeAggregated: any = (rawHome as any)?.data || rawHome || {};
+
+      const bannerItems = Array.isArray(homeAggregated.banner)
+        ? homeAggregated.banner.map(webseriesToContent)
+        : [];
+      const trendingHome = Array.isArray(homeAggregated.trending)
+        ? homeAggregated.trending.map(webseriesToContent)
+        : [];
+      const newReleasesHome = Array.isArray(homeAggregated.newReleases)
+        ? homeAggregated.newReleases.map(webseriesToContent)
+        : [];
+      const topRatedHome = Array.isArray(homeAggregated.topRated)
+        ? homeAggregated.topRated.map(webseriesToContent)
+        : [];
+      const recommendedHome = Array.isArray(homeAggregated.recommended)
+        ? homeAggregated.recommended.map(webseriesToContent)
+        : [];
+      const recentlyAddedHome = Array.isArray(homeAggregated.recentlyAdded)
+        ? homeAggregated.recentlyAdded.map(webseriesToContent)
+        : [];
+      const popularDramasHome = Array.isArray(homeAggregated.popularDramas)
+        ? homeAggregated.popularDramas.map(webseriesToContent)
+        : [];
+
+      const trendingFinal =
+        trendingFromApi.length > 0
+          ? trendingFromApi
+          : trendingHome.length > 0
+          ? trendingHome
+          : bannerItems.length > 0
+          ? bannerItems
+          : latestItems.slice(0, 10);
+
+      const newReleasesFinal =
+        newReleasesFromApi.length > 0
+          ? newReleasesFromApi
+          : newReleasesHome.length > 0
+          ? newReleasesHome
+          : latestItems.filter(w => w.isNew);
+
+      const popularDramasFinal =
+        popularDramasFromApi.length > 0
+          ? popularDramasFromApi
+          : popularDramasHome.length > 0
+          ? popularDramasHome
+          : unwrapList(dramaRes);
+
       return {
-        latest: unwrap(latestRes),
-        action: unwrap(actionRes),
-        drama: unwrap(dramaRes),
+        trending: trendingFinal,
+        newReleases: newReleasesFinal,
+        topRated: topRatedHome,
+        recommended: recommendedHome,
+        recentlyAdded: recentlyAddedHome,
+        popularDramas: popularDramasFinal,
+        latest: latestItems,
+        action: unwrapList(actionRes),
+        drama: unwrapList(dramaRes),
       };
     },
     [token],
@@ -96,10 +190,16 @@ export function HomeScreen({navigation}: Props) {
 
   const {data, loading, error, reload} = useApi(fetchHome, [token]);
 
-  const featured = data?.latest[0];
-  const trending = useMemo(() => data?.latest.slice(0, 10) ?? [], [data]);
+  const featured = data?.trending[0] ?? data?.latest[0];
+  const trending = useMemo(
+    () => (data?.trending.length ? data.trending : data?.latest.slice(0, 10) ?? []),
+    [data],
+  );
   const newReleases = useMemo(
-    () => data?.latest.filter(w => w.isNew) ?? [],
+    () =>
+      data?.newReleases.length
+        ? data.newReleases
+        : data?.latest.filter(w => w.isNew) ?? [],
     [data],
   );
 
@@ -148,6 +248,30 @@ export function HomeScreen({navigation}: Props) {
           />
         ) : null}
 
+        {data?.topRated?.length ? (
+          <MovieRow
+            title="Top Rated"
+            movies={data.topRated}
+            onPressMovie={m => openMovie(m.id)}
+          />
+        ) : null}
+
+        {data?.recommended?.length ? (
+          <MovieRow
+            title="Recommended For You"
+            movies={data.recommended}
+            onPressMovie={m => openMovie(m.id)}
+          />
+        ) : null}
+
+        {data?.recentlyAdded?.length ? (
+          <MovieRow
+            title="Recently Added"
+            movies={data.recentlyAdded}
+            onPressMovie={m => openMovie(m.id)}
+          />
+        ) : null}
+
         {data?.action.length ? (
           <MovieRow
             title="Action & Adventure"
@@ -170,7 +294,7 @@ export function HomeScreen({navigation}: Props) {
             <FlatList
               horizontal
               data={podcasts}
-              keyExtractor={p => p.id}
+              keyExtractor={(p, idx) => (p.id ? `${p.id}-${idx}` : `podcast-${idx}`)}
               contentContainerStyle={styles.hlist}
               ItemSeparatorComponent={() => (
                 <View style={{width: spacing.sm + 2}} />

@@ -32,27 +32,31 @@ function capitalize(g: string): string {
 
 // Backend Webseries → UI ContentItem. Missing fields degrade to `undefined`;
 // components should render fallbacks rather than assuming these exist.
-export function webseriesToContent(w: Webseries): ContentItem {
+export function webseriesToContent(w: any): ContentItem {
+  if (!w) {
+    return {
+      id: '',
+      title: '',
+      genres: [],
+      poster: '',
+      backdrop: '',
+      synopsis: '',
+    };
+  }
+  const id = w._id || w.id || w.redirectId || '';
   return {
-    id: w._id,
-    title: w.title,
+    id,
+    title: w.title || '',
     year: parseYear(w.releaseDate),
     totalEpisodes: w.totalEpisodes,
-    // The backend models a webseries; if it has episodes we surface a
-    // notional "seasons" count of 1 so the details screen shows the
-    // Episodes tab. When the backend adds a real seasons field this can
-    // be replaced.
     seasons:
       typeof w.totalEpisodes === 'number' && w.totalEpisodes > 0
         ? 1
         : undefined,
     genres: (w.genres ?? []).map(capitalize),
-    poster: w.thumbnail || w.coverImage || '',
-    backdrop: w.coverImage || w.thumbnail || '',
+    poster: w.thumbnail || w.image || w.coverImage || '',
+    backdrop: w.image || w.coverImage || w.thumbnail || '',
     synopsis: w.description || '',
-    // `cast` is a union: unpopulated ObjectIds on list responses, populated
-    // `CastMember[]` on `GET /mobile-users/webseries/:id`. We only surface
-    // it when populated (list responses would show meaningless hex IDs).
     cast: castMemberNames(w.cast),
     maturity: w.ageRating,
     isNew: isRecent(w.releaseDate),

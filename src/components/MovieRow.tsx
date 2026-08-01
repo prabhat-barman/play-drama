@@ -16,7 +16,7 @@ export function MovieRow({title, movies, onPressMovie}: Props) {
       <Text style={styles.title}>{title}</Text>
       <FlatList
         data={movies}
-        keyExtractor={m => m.id}
+        keyExtractor={(m, idx) => (m.id ? `${m.id}-${idx}` : `movie-${idx}`)}
         renderItem={({item}) => (
           <MovieCard movie={item} onPress={() => onPressMovie(item)} />
         )}
