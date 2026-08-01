@@ -1,5 +1,5 @@
-import React, {useEffect, useRef} from 'react';
-import {StatusBar} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {Platform, StatusBar} from 'react-native';
 import {
   NavigationContainer,
   DarkTheme,
@@ -15,6 +15,92 @@ import {
   setNotificationTapHandler,
   NotificationTapPayload,
 } from './src/lib/pushNotifications';
+import {AppUpdateModal, UpdateType} from './src/components/AppUpdateModal';
+import {api, type AppConfig} from './src/lib/api';
+import pkg from './package.json';
+
+const CURRENT_APP_VERSION = pkg.version || '0.0.1';
+
+function isVersionLower(current: string, target?: string): boolean {
+  if (!target) return false;
+  const c = current.split('.').map(Number);
+  const t = target.split('.').map(Number);
+  for (let i = 0; i < Math.max(c.length, t.length); i++) {
+    const cv = c[i] || 0;
+    const tv = t[i] || 0;
+    if (cv < tv) return true;
+    if (cv > tv) return false;
+  }
+  return false;
+}
+
+function AppUpdateManager() {
+  const [updateModal, setUpdateModal] = useState<{
+    visible: boolean;
+    type: UpdateType;
+    latestVersion?: string;
+    maintenanceMessage?: string;
+  }>({visible: false, type: 'optional'});
+
+  useEffect(() => {
+    let unmounted = false;
+    api.config
+      .get()
+      .then((cfg: AppConfig) => {
+        if (unmounted || !cfg) return;
+
+        // 1. Maintenance Mode
+        if (cfg.maintenance?.enabled) {
+          setUpdateModal({
+            visible: true,
+            type: 'maintenance',
+            maintenanceMessage: cfg.maintenance.message,
+          });
+          return;
+        }
+
+        const platformKey = Platform.OS === 'ios' ? 'ios' : 'android';
+        const minVer = cfg.minSupportedVersion?.[platformKey];
+        const latestVer = cfg.latestVersion?.[platformKey];
+
+        // 2. Force Upgrade
+        if (cfg.forceUpgrade || isVersionLower(CURRENT_APP_VERSION, minVer)) {
+          setUpdateModal({
+            visible: true,
+            type: 'force',
+            latestVersion: latestVer || minVer,
+          });
+          return;
+        }
+
+        // 3. Optional Upgrade
+        if (isVersionLower(CURRENT_APP_VERSION, latestVer)) {
+          setUpdateModal({
+            visible: true,
+            type: 'optional',
+            latestVersion: latestVer,
+          });
+        }
+      })
+      .catch(() => {
+        // Silently ignore config network errors
+      });
+
+    return () => {
+      unmounted = true;
+    };
+  }, []);
+
+  return (
+    <AppUpdateModal
+      visible={updateModal.visible}
+      type={updateModal.type}
+      latestVersion={updateModal.latestVersion}
+      maintenanceMessage={updateModal.maintenanceMessage}
+      onDismiss={() => setUpdateModal(v => ({...v, visible: false}))}
+    />
+  );
+}
 
 const navTheme = {
   ...DarkTheme,
@@ -95,6 +181,7 @@ function App() {
               setNotificationTapHandler(handleNotificationTap);
             }}>
             <RootNavigator />
+            <AppUpdateManager />
           </NavigationContainer>
         </NotificationsProvider>
       </AuthProvider>
