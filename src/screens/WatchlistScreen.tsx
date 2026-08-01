@@ -70,7 +70,7 @@ export function WatchlistScreen(_: Props) {
             <BookmarkIcon size={44} color={colors.textMuted} />
             <Text style={styles.stateTitle}>Your watchlist is empty</Text>
             <Text style={styles.stateBody}>
-              Tap the + Watchlist button on any title to save it here.
+              Tap the Watchlist button on any title to save it here.
             </Text>
             <Text style={styles.stateHint}>
               Server-side sync coming soon.
