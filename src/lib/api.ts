@@ -1302,6 +1302,13 @@ export const api = {
         token: input.token,
         signal: input.signal,
       }),
+
+    upcomingSeries: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<Webseries[]>('/webseries/upcoming-series', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
   },
 
   episodes: {
@@ -1455,8 +1462,106 @@ export const api = {
 
   // ---- Phase 1: Home feed aggregator ----
   home: {
-    get: (input: {token?: string | null; signal?: AbortSignal}) =>
+    get: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
       request<HomeFeed>('/home', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    banners: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<any[]>('/home/banners', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    continueWatching: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<ContinueWatchingItem[]>('/home/continue-watching', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    upcomingMovies: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<Webseries[]>('/home/upcoming-movies', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    recentlyAdded: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<Webseries[]>('/home/recently-added', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    featuredMovies: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<Webseries[]>('/home/featured-movies', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    featuredSeries: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<Webseries[]>('/home/featured-series', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    categories: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<Genre[]>('/home/categories', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    popularDramas: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<Webseries[]>('/home/dramas/popular', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    popularActors: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<Student[]>('/home/actors/popular', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    featuredInstitutes: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<InstituteSummary[]>('/home/institutes/featured', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    recommended: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<Webseries[]>('/home/recommended', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    trending: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<Webseries[]>('/home/trending', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    topRated: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<Webseries[]>('/home/top-rated', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    newReleases: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+      request<Webseries[]>('/home/new-releases', {
         method: 'GET',
         token: input.token,
         signal: input.signal,
