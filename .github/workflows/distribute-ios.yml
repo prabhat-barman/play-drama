@@ -24,13 +24,9 @@ name: Distribute iOS beta
 # See CineStream/DISTRIBUTION.md for the full walkthrough.
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
-      - 'android/**'
-      - '.github/workflows/distribute-android.yml'
+  # Disabled push trigger for now. Run manually via workflow_dispatch if needed.
+  # push:
+  #   branches: [main]
   workflow_dispatch:
     inputs:
       lane:
