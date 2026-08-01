@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import Video from 'react-native-video';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {colors, radius, spacing} from '../theme/colors';
@@ -84,16 +85,12 @@ export function PlayerScreen({navigation, route}: Props) {
   const [playing, setPlaying] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const fade = useRef(new Animated.Value(1)).current;
+  const videoRef = useRef<any>(null);
 
-  useEffect(() => {
-    if (!playing) {
-      return;
-    }
-    const interval = setInterval(() => {
-      setCurrent(c => Math.min(c + 1, totalSec));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [playing, totalSec]);
+  const handleSeek = (newTime: number) => {
+    setCurrent(newTime);
+    videoRef.current?.seek?.(newTime);
+  };
 
   useEffect(() => {
     Animated.timing(fade, {
@@ -144,13 +141,13 @@ export function PlayerScreen({navigation, route}: Props) {
   const remaining = Math.max(totalSec - current, 0);
   const progress = totalSec > 0 ? current / totalSec : 0;
   const backdrop = firstEpisode?.thumbnail || series.coverImage || series.thumbnail || '';
+  const streamUrl = firstEpisode?.videoUrl || (series as any).videoUrl;
+  const canPlay = !!streamUrl;
   const subLine = firstEpisode
     ? `Episode ${firstEpisode.episodeNumber}${firstEpisode.title ? ` · ${firstEpisode.title}` : ''}`
     : series.language
       ? series.language.toUpperCase()
       : '';
-
-  const canPlay = firstEpisode?.status === 'COMPLETED' && !!firstEpisode.videoUrl;
 
   return (
     <View style={styles.root}>
@@ -159,7 +156,18 @@ export function PlayerScreen({navigation, route}: Props) {
       <Pressable
         onPress={() => setShowControls(v => !v)}
         style={StyleSheet.absoluteFill}>
-        {backdrop ? (
+        {canPlay && streamUrl ? (
+          <Video
+            ref={videoRef}
+            source={{uri: streamUrl}}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+            paused={!playing}
+            volume={1.0}
+            onProgress={e => setCurrent(e.currentTime)}
+            onEnd={() => setPlaying(false)}
+          />
+        ) : backdrop ? (
           <Image
             source={{uri: backdrop}}
             style={styles.backdrop}
@@ -202,7 +210,7 @@ export function PlayerScreen({navigation, route}: Props) {
 
         <View style={styles.centerControls}>
           <Pressable
-            onPress={() => setCurrent(c => Math.max(0, c - 10))}
+            onPress={() => handleSeek(Math.max(0, current - 10))}
             style={styles.sideBtn}
             hitSlop={12}>
             <RewindIcon size={30} />
@@ -221,7 +229,7 @@ export function PlayerScreen({navigation, route}: Props) {
           </Pressable>
 
           <Pressable
-            onPress={() => setCurrent(c => Math.min(totalSec, c + 10))}
+            onPress={() => handleSeek(Math.min(totalSec, current + 10))}
             style={styles.sideBtn}
             hitSlop={12}>
             <ForwardIcon size={30} />
