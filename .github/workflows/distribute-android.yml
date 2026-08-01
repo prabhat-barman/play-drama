@@ -91,7 +91,7 @@ jobs:
           '
           echo "------------------------------------"
 
-          APP_ID="${FIREBASE_ANDROID_APP_ID:-1:55460051377:android:44de0ae4a092b408a6e590}"
+          APP_ID="${FIREBASE_ANDROID_APP_ID:-1:55460051377:android:96f7344187a9e089a6e590}"
           npx --yes firebase-tools appdistribution:distribute \
             android/app/build/outputs/apk/release/app-release.apk \
             --app "$APP_ID" \

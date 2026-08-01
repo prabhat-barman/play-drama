@@ -9,43 +9,6 @@
       "client_info": {
         "mobilesdk_app_id": "1:55460051377:android:44de0ae4a092b408a6e590",
         "android_client_info": {
-          "package_name": "com.playdrama"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "55460051377-namsd0eu4rg9kimohc7dt9pe3iiq5l8g.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.playdrama",
-            "certificate_hash": "661e6b3c322fe3160e099dd4ad87225d2d16dba2"
-          }
-        },
-        {
-          "client_id": "55460051377-uf8f5s2n6mvk0tv2ln5b87urfcm77fsg.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyC-IFosB4sW82rIrrc28HNEsFrxTfkG8uk"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "55460051377-uf8f5s2n6mvk0tv2ln5b87urfcm77fsg.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:55460051377:android:44de0ae4a092b408a6e590",
-        "android_client_info": {
           "package_name": "com.cinestream"
         }
       },
@@ -74,6 +37,49 @@
             {
               "client_id": "55460051377-uf8f5s2n6mvk0tv2ln5b87urfcm77fsg.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "55460051377-c66hdjtgmu796kc0e66bputhscu69as4.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.cinestream"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:55460051377:android:96f7344187a9e089a6e590",
+        "android_client_info": {
+          "package_name": "com.playdrama"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "55460051377-uf8f5s2n6mvk0tv2ln5b87urfcm77fsg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-IFosB4sW82rIrrc28HNEsFrxTfkG8uk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "55460051377-uf8f5s2n6mvk0tv2ln5b87urfcm77fsg.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "55460051377-c66hdjtgmu796kc0e66bputhscu69as4.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.cinestream"
+              }
             }
           ]
         }
