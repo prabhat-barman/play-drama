@@ -168,7 +168,9 @@ export function MovieDetailsScreen({navigation, route}: Props) {
 
   return (
     <View style={styles.root}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}>
         <View style={styles.hero}>
           <Image
             source={{uri: movie.backdrop}}
@@ -251,39 +253,47 @@ export function MovieDetailsScreen({navigation, route}: Props) {
             ) : null}
           </View>
 
-          <View style={styles.heroActions}>
+          <View style={styles.mainActionRow}>
             <Pressable
               onPress={() => navigation.navigate('Player', {id: movie.id})}
               style={({pressed}) => [styles.playBtn, pressed && styles.pressed]}>
-              <PlayIcon size={16} color={colors.brandText} />
+              <PlayIcon size={18} color={colors.brandText} filled />
               <Text style={styles.playText}>
                 {isSeries && episodes[0]
                   ? `Play E${episodes[0].episodeNumber}`
                   : 'Play Now'}
               </Text>
             </Pressable>
-            <Pressable
-              onPress={() => setSaved(v => !v)}
-              style={({pressed}) => [styles.listBtn, pressed && styles.pressed]}>
-              {saved ? (
-                <BookmarkIcon size={16} color={colors.textPrimary} filled />
-              ) : (
-                <PlusIcon size={16} />
-              )}
-              <Text style={styles.listText}>
-                {saved ? 'In Watchlist' : '+ Watchlist'}
-              </Text>
-            </Pressable>
           </View>
 
-          <View style={styles.trailerRow}>
-            <Pressable style={styles.trailerBtn}>
-              <PlayIcon size={12} color={colors.brandText} filled={false} />
-              <Text style={styles.trailerText}>Trailer</Text>
+          <View style={styles.subActionRow}>
+            <Pressable
+              onPress={() => setSaved(v => !v)}
+              style={({pressed}) => [styles.subActionBtn, pressed && styles.pressed]}>
+              {saved ? (
+                <BookmarkIcon size={16} color={colors.brand} filled />
+              ) : (
+                <PlusIcon size={16} color={colors.textPrimary} />
+              )}
+              <Text
+                style={[
+                  styles.subActionText,
+                  saved && styles.subActionTextActive,
+                ]}>
+                {saved ? 'In Watchlist' : 'Watchlist'}
+              </Text>
             </Pressable>
-            <Pressable style={styles.trailerBtn}>
-              <DownloadIcon size={14} />
-              <Text style={styles.trailerText}>Download</Text>
+
+            <Pressable
+              style={({pressed}) => [styles.subActionBtn, pressed && styles.pressed]}>
+              <PlayIcon size={14} color={colors.textPrimary} filled={false} />
+              <Text style={styles.subActionText}>Trailer</Text>
+            </Pressable>
+
+            <Pressable
+              style={({pressed}) => [styles.subActionBtn, pressed && styles.pressed]}>
+              <DownloadIcon size={16} color={colors.textPrimary} />
+              <Text style={styles.subActionText}>Download</Text>
             </Pressable>
           </View>
 
@@ -400,9 +410,11 @@ export function MovieDetailsScreen({navigation, route}: Props) {
                     <Text style={styles.castInitials}>
                       {c
                         .split(' ')
+                        .filter(Boolean)
                         .map(s => s[0])
                         .slice(0, 2)
-                        .join('')}
+                        .join('')
+                        .toUpperCase() || '?'}
                     </Text>
                   </View>
                   <View style={{flex: 1}}>
@@ -437,6 +449,7 @@ function formatEpisodeMeta(e: ApiEpisode): string {
 
 const styles = StyleSheet.create({
   root: {flex: 1, backgroundColor: colors.background},
+  scrollContent: {paddingBottom: 60},
   emptyRoot: {
     flex: 1,
     alignItems: 'center',
@@ -480,7 +493,9 @@ const styles = StyleSheet.create({
   heroHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+    zIndex: 10,
   },
   heroRightRow: {flexDirection: 'row', gap: spacing.sm + 2},
   iconBtn: {
@@ -537,14 +552,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.textMuted,
     opacity: 0.6,
   },
-  heroActions: {
-    flexDirection: 'row',
-    gap: spacing.sm + 2,
-    marginBottom: spacing.sm + 2,
+  mainActionRow: {
+    marginBottom: spacing.sm + 4,
   },
   playBtn: {
-    flex: 1,
-    height: 46,
+    width: '100%',
+    height: 48,
     borderRadius: radius.md,
     backgroundColor: colors.brand,
     alignItems: 'center',
@@ -552,38 +565,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  playText: {color: colors.brandText, fontSize: 14, fontWeight: '700'},
-  listBtn: {
+  playText: {color: colors.brandText, fontSize: 15, fontWeight: '800'},
+  subActionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm + 2,
+    marginBottom: spacing.lg,
+  },
+  subActionBtn: {
     flex: 1,
-    height: 46,
+    height: 42,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: colors.glassBg,
     borderColor: colors.glassBorder,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 8,
-  },
-  listText: {color: colors.textPrimary, fontSize: 14, fontWeight: '600'},
-  pressed: {opacity: 0.85, transform: [{scale: 0.99}]},
-  trailerRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  trailerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
-    height: 34,
-    borderRadius: 999,
-    backgroundColor: colors.glassBg,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
   },
-  trailerText: {color: colors.textPrimary, fontSize: 12, fontWeight: '600'},
+  subActionText: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  subActionTextActive: {
+    color: colors.brand,
+    fontWeight: '700',
+  },
+  pressed: {opacity: 0.82, transform: [{scale: 0.98}]},
   synopsis: {
     color: colors.textPrimary,
     fontSize: 14,

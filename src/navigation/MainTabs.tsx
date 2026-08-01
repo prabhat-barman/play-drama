@@ -6,6 +6,8 @@ import {DiscoverScreen} from '../screens/DiscoverScreen';
 import {SearchScreen} from '../screens/SearchScreen';
 import {WatchlistScreen} from '../screens/WatchlistScreen';
 import {ProfileScreen} from '../screens/ProfileScreen';
+import {StudentProfileScreen} from '../screens/StudentProfileScreen';
+import {useAuth} from '../context/AuthContext';
 import {
   BookmarkIcon,
   CompassIcon,
@@ -26,6 +28,9 @@ export type MainTabParamList = {
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export function MainTabs() {
+  const {user} = useAuth();
+  const isStudent = user?.role === 'STUDENT';
+
   return (
     <Tab.Navigator
       screenOptions={({route}) => ({
@@ -57,7 +62,10 @@ export function MainTabs() {
       <Tab.Screen name="Discover" component={DiscoverScreen} />
       <Tab.Screen name="Search" component={SearchScreen} />
       <Tab.Screen name="Watchlist" component={WatchlistScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen
+        name="Profile"
+        component={isStudent ? StudentProfileScreen : ProfileScreen}
+      />
     </Tab.Navigator>
   );
 }
