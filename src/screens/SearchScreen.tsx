@@ -15,6 +15,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {colors, radius, spacing} from '../theme/colors';
 import {SearchIcon} from '../components/icons';
 import {MovieCard} from '../components/MovieCard';
+import {MovieCardSkeleton} from '../components/Skeleton';
 import {api} from '../lib/api';
 import {webseriesToContent} from '../lib/adapters';
 import {useApi} from '../lib/useApi';
@@ -146,8 +147,11 @@ export function SearchScreen({navigation}: Props) {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           loading ? (
-            <View style={styles.state}>
-              <ActivityIndicator color={colors.brand} />
+            <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center', marginTop: spacing.md}}>
+              <MovieCardSkeleton width={160} />
+              <MovieCardSkeleton width={160} />
+              <MovieCardSkeleton width={160} />
+              <MovieCardSkeleton width={160} />
             </View>
           ) : error ? (
             <View style={styles.state}>

@@ -27,6 +27,7 @@ import {
 } from '../components/icons';
 import {MovieRow} from '../components/MovieRow';
 import {SectionHeader} from '../components/SectionHeader';
+import {Skeleton, MovieRowSkeleton} from '../components/Skeleton';
 import {api} from '../lib/api';
 import {webseriesToContent} from '../lib/adapters';
 import {useApi} from '../lib/useApi';
@@ -123,6 +124,13 @@ export function HomeScreen({navigation}: Props) {
           onOpenNotifications={() => navigation.navigate('Notifications')}
           unreadCount={unreadCount}
         />
+
+        {loading && !data ? (
+          <>
+            <MovieRowSkeleton titleWidth={130} />
+            <MovieRowSkeleton titleWidth={160} />
+          </>
+        ) : null}
 
         {trending.length ? (
           <MovieRow
@@ -313,8 +321,11 @@ function HeroSection({
 
       <View style={styles.heroBody}>
         {loading && !featured ? (
-          <View style={styles.heroLoading}>
-            <ActivityIndicator color={colors.brand} />
+          <View style={{gap: 10, paddingBottom: spacing.sm}}>
+            <Skeleton width={110} height={20} borderRadius={4} />
+            <Skeleton width="75%" height={32} borderRadius={6} />
+            <Skeleton width="50%" height={14} borderRadius={4} />
+            <Skeleton width="100%" height={40} borderRadius={6} style={{marginTop: 6}} />
           </View>
         ) : error && !featured ? (
           <View style={styles.heroError}>

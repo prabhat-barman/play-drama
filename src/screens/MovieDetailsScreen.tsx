@@ -25,6 +25,7 @@ import {
 } from '../components/icons';
 import {SegmentedTabs} from '../components/SegmentedTabs';
 import {MovieCard} from '../components/MovieCard';
+import {Skeleton} from '../components/Skeleton';
 import {api, type Episode as ApiEpisode} from '../lib/api';
 import {
   episodeRuntimeMinutes,
@@ -136,8 +137,21 @@ export function MovieDetailsScreen({navigation, route}: Props) {
 
   if (loading && !movie) {
     return (
-      <View style={styles.emptyRoot}>
-        <ActivityIndicator color={colors.brand} />
+      <View style={styles.root}>
+        <Skeleton width="100%" height={340} borderRadius={0} />
+        <View style={{paddingHorizontal: spacing.md, marginTop: -60, gap: 12}}>
+          <Skeleton width="80%" height={32} borderRadius={6} />
+          <Skeleton width="50%" height={16} borderRadius={4} />
+          <Skeleton width="100%" height={48} borderRadius={radius.md} style={{marginTop: 6}} />
+          <View style={{flexDirection: 'row', gap: 10}}>
+            <Skeleton width="31%" height={42} borderRadius={radius.md} />
+            <Skeleton width="31%" height={42} borderRadius={radius.md} />
+            <Skeleton width="31%" height={42} borderRadius={radius.md} />
+          </View>
+          <Skeleton width="100%" height={14} borderRadius={4} style={{marginTop: 10}} />
+          <Skeleton width="90%" height={14} borderRadius={4} />
+          <Skeleton width="70%" height={14} borderRadius={4} />
+        </View>
       </View>
     );
   }

@@ -27,6 +27,7 @@ import {
 } from '../components/icons';
 import {SectionHeader} from '../components/SectionHeader';
 import {MovieCard} from '../components/MovieCard';
+import {Skeleton, MovieRowSkeleton} from '../components/Skeleton';
 import {api} from '../lib/api';
 import type {Student} from '../lib/api';
 import {webseriesToContent} from '../lib/adapters';
@@ -174,8 +175,10 @@ export function DiscoverScreen({navigation}: Props) {
         ) : null}
 
         {loading && !items.length ? (
-          <View style={styles.loadingBlock}>
-            <ActivityIndicator color={colors.brand} />
+          <View style={{paddingHorizontal: spacing.md}}>
+            <Skeleton width="100%" height={240} borderRadius={radius.lg} style={{marginBottom: spacing.md}} />
+            <MovieRowSkeleton titleWidth={120} />
+            <MovieRowSkeleton titleWidth={150} />
           </View>
         ) : null}
 
