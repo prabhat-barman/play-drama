@@ -138,7 +138,7 @@ function handleNotificationTap(payload: NotificationTapPayload) {
   if (payload.deepLink) {
     // Simple cinestream://webseries/<id> and cinestream://player/<id>
     // handling. Anything richer should get its own case above.
-    const match = /^cinestream:\/\/([^/]+)\/([^?#]+)/.exec(payload.deepLink);
+    const match = /^playdrama:\/\/([^/]+)\/([^?#]+)/.exec(payload.deepLink);
     if (match) {
       const [, kind, id] = match;
       if (kind === 'webseries') {
