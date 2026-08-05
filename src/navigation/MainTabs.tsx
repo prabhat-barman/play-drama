@@ -1,6 +1,9 @@
 import React from 'react';
 import {Platform, StyleSheet} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+
+
 import {HomeScreen} from '../screens/HomeScreen';
 import {DiscoverScreen} from '../screens/DiscoverScreen';
 import {SearchScreen} from '../screens/SearchScreen';
@@ -28,8 +31,11 @@ export type MainTabParamList = {
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export function MainTabs() {
+  const insets = useSafeAreaInsets();
   const {user} = useAuth();
   const isStudent = user?.role === 'STUDENT';
+
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 8);
 
   return (
     <Tab.Navigator
@@ -38,7 +44,13 @@ export function MainTabs() {
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarShowLabel: true,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: 56 + bottomInset,
+            paddingBottom: bottomInset,
+          },
+        ],
         tabBarLabelStyle: styles.label,
         tabBarIcon: ({focused, color}) => {
           const size = 22;
@@ -75,9 +87,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10,10,10,0.96)',
     borderTopColor: colors.glassBorder,
     borderTopWidth: StyleSheet.hairlineWidth,
-    height: Platform.select({ios: 82, android: 62}),
-    paddingTop: 8,
-    paddingBottom: Platform.select({ios: 24, android: 8}),
+    elevation: 8,
   },
   label: {
     fontSize: 10,
@@ -86,3 +96,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 });
+

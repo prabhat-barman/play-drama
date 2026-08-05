@@ -338,3 +338,15 @@ function toPayload(
     raw,
   };
 }
+
+export async function sendNotification(input: {
+  token: string;
+  title: string;
+  message: string;
+  type?: import('./api').NotificationType;
+  targetUserId?: string;
+  deepLink?: string;
+}) {
+  return api.notifications.send(input);
+}
+

@@ -17,6 +17,7 @@ import {
   BookmarkIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
+  ChevronRightIcon,
   DownloadIcon,
   HeartIcon,
   PlayIcon,
@@ -24,6 +25,7 @@ import {
   ShareIcon,
   StarIcon,
 } from '../components/icons';
+
 import {SegmentedTabs} from '../components/SegmentedTabs';
 import {MovieCard} from '../components/MovieCard';
 import {Skeleton} from '../components/Skeleton';
@@ -52,6 +54,8 @@ export function MovieDetailsScreen({navigation, route}: Props) {
   const id = route.params.id;
   const [saved, setSaved] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [selectedSeason, setSelectedSeason] = useState(1);
+
 
   const fetchBundle = useCallback(
     async (signal: AbortSignal): Promise<Bundle> => {
@@ -359,13 +363,43 @@ export function MovieDetailsScreen({navigation, route}: Props) {
 
         {activeTab === 'episodes' && isSeries ? (
           <View style={styles.section}>
+            {/* Season Selector */}
             <View style={styles.seasonRow}>
-              <Text style={styles.seasonLabel}>Season 1</Text>
+              <View style={{flexDirection: 'row', gap: 8, alignItems: 'center'}}>
+                <Pressable
+                  onPress={() => setSelectedSeason(1)}
+                  style={[
+                    styles.seasonPill,
+                    selectedSeason === 1 && styles.seasonPillActive,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.seasonPillText,
+                      selectedSeason === 1 && styles.seasonPillTextActive,
+                    ]}>
+                    Season 1
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setSelectedSeason(2)}
+                  style={[
+                    styles.seasonPill,
+                    selectedSeason === 2 && styles.seasonPillActive,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.seasonPillText,
+                      selectedSeason === 2 && styles.seasonPillTextActive,
+                    ]}>
+                    Season 2
+                  </Text>
+                </Pressable>
+              </View>
               <Text style={styles.seasonCount}>
                 {episodes.length} Episodes
               </Text>
-              <ChevronDownIcon size={18} color={colors.textMuted} />
             </View>
+
             {episodes.length ? (
               episodes.map(e => (
                 <Pressable
@@ -388,7 +422,7 @@ export function MovieDetailsScreen({navigation, route}: Props) {
                   </View>
                   <View style={styles.epBody}>
                     <Text style={styles.epTitle}>
-                      {e.episodeNumber}. {e.title}
+                      S{selectedSeason} E{e.episodeNumber}. {e.title}
                     </Text>
                     {e.description ? (
                       <Text style={styles.epSynopsis} numberOfLines={2}>
@@ -434,8 +468,13 @@ export function MovieDetailsScreen({navigation, route}: Props) {
         {activeTab === 'cast' ? (
           <View style={styles.section}>
             {cast.length ? (
-              cast.map(c => (
-                <View key={c} style={styles.castRow}>
+              cast.map((c, idx) => (
+                <Pressable
+                  key={idx}
+                  onPress={() =>
+                    navigation.navigate('ActorProfile', {studentId: `student_${idx + 1}`})
+                  }
+                  style={({pressed}) => [styles.castRow, pressed && styles.pressed]}>
                   <View style={styles.castAvatar}>
                     <Text style={styles.castInitials}>
                       {c
@@ -449,15 +488,17 @@ export function MovieDetailsScreen({navigation, route}: Props) {
                   </View>
                   <View style={{flex: 1}}>
                     <Text style={styles.castName}>{c}</Text>
-                    <Text style={styles.castRole}>Cast Member</Text>
+                    <Text style={styles.castRole}>Actor · Tap to view profile</Text>
                   </View>
-                </View>
+                  <ChevronRightIcon size={16} color={colors.textMuted} />
+                </Pressable>
               ))
             ) : (
               <Text style={styles.emptyBlockText}>Cast list unavailable.</Text>
             )}
           </View>
         ) : null}
+
       </ScrollView>
     </View>
   );
@@ -652,7 +693,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
   },
+  seasonPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  seasonPillActive: {
+    backgroundColor: colors.brand,
+    borderColor: colors.brand,
+  },
+  seasonPillText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  seasonPillTextActive: {
+    color: colors.brandText,
+    fontWeight: '800',
+  },
   seasonCount: {color: colors.textMuted, fontSize: 12},
+
   epRow: {
     flexDirection: 'row',
     gap: spacing.md,

@@ -9,6 +9,9 @@ import {OnboardingScreen} from '../screens/OnboardingScreen';
 import {PlayerScreen} from '../screens/PlayerScreen';
 import {NotificationsScreen} from '../screens/NotificationsScreen';
 import {ChangePasswordScreen} from '../screens/ChangePasswordScreen';
+import {ActorProfileScreen} from '../screens/ActorProfileScreen';
+import {InstituteProfileScreen} from '../screens/InstituteProfileScreen';
+import {EditProfileScreen} from '../screens/EditProfileScreen';
 import {useAuth} from '../context/AuthContext';
 import {colors} from '../theme/colors';
 
@@ -21,6 +24,9 @@ export type RootStackParamList = {
   Player: {id: string; episodeId?: string};
   Notifications: undefined;
   ChangePassword: undefined;
+  ActorProfile: {studentId: string};
+  InstituteProfile: {instituteId?: string; studentId?: string};
+  EditProfile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -79,7 +85,23 @@ export function RootNavigator() {
             component={ChangePasswordScreen}
             options={{animation: 'slide_from_right'}}
           />
+          <Stack.Screen
+            name="ActorProfile"
+            component={ActorProfileScreen}
+            options={{animation: 'slide_from_right'}}
+          />
+          <Stack.Screen
+            name="InstituteProfile"
+            component={InstituteProfileScreen}
+            options={{animation: 'slide_from_right'}}
+          />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfileScreen}
+            options={{animation: 'slide_from_bottom'}}
+          />
         </>
+
       ) : (
         <>
           <Stack.Screen

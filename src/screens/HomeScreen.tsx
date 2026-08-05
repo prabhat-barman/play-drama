@@ -3,14 +3,17 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+
 import type {CompositeScreenProps} from '@react-navigation/native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
@@ -380,6 +383,12 @@ function HeroSection({
   onOpenNotifications,
   unreadCount,
 }: HeroProps) {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 12,
+  );
+
   return (
     <View style={styles.hero}>
       {featured ? (
@@ -402,9 +411,10 @@ function HeroSection({
         style={StyleSheet.absoluteFill}
       />
 
-      <SafeAreaView edges={['top']} style={styles.heroTopBar}>
-        <View style={styles.heroHeader}>
+      <View style={styles.heroTopBar}>
+        <View style={[styles.heroHeader, {paddingTop: topInset + 6}]}>
           <Text style={styles.brand}>PLAY DRAMA</Text>
+
           <View style={styles.headerActions}>
             <Pressable hitSlop={8}>
               <CastIcon />
@@ -441,7 +451,8 @@ function HeroSection({
           })}
         </View>
         <View style={styles.chipsDivider} />
-      </SafeAreaView>
+      </View>
+
 
       <View style={styles.heroBody}>
         {loading && !featured ? (

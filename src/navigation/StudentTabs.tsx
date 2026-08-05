@@ -1,6 +1,7 @@
 import React from 'react';
 import {Platform, StyleSheet} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {StudentProfileScreen} from '../screens/StudentProfileScreen';
 import {ProfileIcon} from '../components/icons';
 import {colors} from '../theme/colors';
@@ -29,6 +30,9 @@ const renderProfileIcon = ({
 }) => <ProfileIcon size={22} color={focused ? colors.brand : color} />;
 
 export function StudentTabs() {
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 8);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -36,7 +40,13 @@ export function StudentTabs() {
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarShowLabel: true,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: 56 + bottomInset,
+            paddingBottom: bottomInset,
+          },
+        ],
         tabBarLabelStyle: styles.label,
         tabBarIcon: renderProfileIcon,
       }}>
@@ -50,9 +60,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10,10,10,0.96)',
     borderTopColor: colors.glassBorder,
     borderTopWidth: StyleSheet.hairlineWidth,
-    height: Platform.select({ios: 82, android: 62}),
-    paddingTop: 8,
-    paddingBottom: Platform.select({ios: 24, android: 8}),
+    elevation: 8,
   },
   label: {
     fontSize: 10,
@@ -61,3 +69,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 });
+
