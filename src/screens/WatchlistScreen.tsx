@@ -26,7 +26,8 @@ type TabKey = 'watchlist' | 'downloads';
 // exists but no HTTP routes, no downloads model). This screen currently
 // shows an empty state; wire it to real endpoints once the backend ships
 // them, e.g. GET /watchlist, GET /downloads.
-export function WatchlistScreen(_: Props) {
+export function WatchlistScreen({navigation}: Props) {
+
   const [tab, setTab] = useState<TabKey>('watchlist');
 
   return (
@@ -72,9 +73,11 @@ export function WatchlistScreen(_: Props) {
             <Text style={styles.stateBody}>
               Tap the Watchlist button on any title to save it here.
             </Text>
-            <Text style={styles.stateHint}>
-              Server-side sync coming soon.
-            </Text>
+            <Pressable
+              onPress={() => navigation.navigate('Discover')}
+              style={({pressed}) => [styles.browseBtn, pressed && {opacity: 0.75}]}>
+              <Text style={styles.browseText}>Browse Web Series</Text>
+            </Pressable>
           </>
         ) : (
           <>
@@ -83,12 +86,15 @@ export function WatchlistScreen(_: Props) {
             <Text style={styles.stateBody}>
               Downloaded titles will appear here for offline viewing.
             </Text>
-            <Text style={styles.stateHint}>
-              Downloads coming soon.
-            </Text>
+            <Pressable
+              onPress={() => navigation.navigate('Discover')}
+              style={({pressed}) => [styles.browseBtn, pressed && {opacity: 0.75}]}>
+              <Text style={styles.browseText}>Explore Content</Text>
+            </Pressable>
           </>
         )}
       </View>
+
     </SafeAreaView>
   );
 }
@@ -167,12 +173,17 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center',
   },
-  stateHint: {
-    color: colors.textAccent,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    marginTop: spacing.sm,
-    opacity: 0.7,
+  browseBtn: {
+    backgroundColor: colors.brand,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: 999,
+    marginTop: spacing.md,
+  },
+  browseText: {
+    color: colors.brandText,
+    fontSize: 13,
+    fontWeight: '800',
   },
 });
+

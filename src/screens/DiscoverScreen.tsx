@@ -12,9 +12,10 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import type {CompositeScreenProps} from '@react-navigation/native';
+import {useNavigation, type CompositeScreenProps} from '@react-navigation/native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
+import type {NativeStackNavigationProp, NativeStackScreenProps} from '@react-navigation/native-stack';
+
 import {recentSearches, searchCategories} from '../data/placeholders';
 import {colors, radius, spacing} from '../theme/colors';
 import {
@@ -345,11 +346,14 @@ function studentInitials(fullName: string): string {
 }
 
 function StudentAvatar({student}: {student: Student}) {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [imgFailed, setImgFailed] = useState(false);
   const showImage = !!student.profileImage && !imgFailed;
   const subtitle = student.course || student.department;
   return (
-    <View style={styles.studentCard}>
+    <Pressable
+      onPress={() => navigation.navigate('ActorProfile', {studentId: student._id})}
+      style={({pressed}) => [styles.studentCard, pressed && {opacity: 0.75}]}>
       <View style={styles.studentAvatarRing}>
         {showImage ? (
           <Image
@@ -379,9 +383,10 @@ function StudentAvatar({student}: {student: Student}) {
           {subtitle}
         </Text>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
+
 
 const styles = StyleSheet.create({
   root: {flex: 1, backgroundColor: colors.background},

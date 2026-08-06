@@ -269,6 +269,21 @@ export type StudentDetail = Student & {
   institute?: StudentInstituteSummary;
 };
 
+export type UpdateStudentInput = {
+  fullName?: string;
+  phone?: string;
+  course?: string;
+  department?: string;
+  batch?: string;
+  semester?: string;
+  bio?: string;
+  skills?: string[];
+  socialLinks?: StudentSocialLink[];
+  achievements?: StudentAchievement[];
+  email?: string;
+};
+
+
 // ------------------------------
 // Notifications & push
 // ------------------------------
@@ -1303,6 +1318,13 @@ export const api = {
         signal: input.signal,
       }),
 
+    getSeriesById: (input: {token: string; id: string; signal?: AbortSignal}) =>
+      request<Webseries>(`/webseries/${encodeURIComponent(input.id)}`, {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
     upcomingSeries: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
       request<Webseries[]>('/webseries/upcoming-series', {
         method: 'GET',
@@ -1374,6 +1396,17 @@ export const api = {
           signal: input.signal,
         },
       ),
+
+    update: (input: {
+      token: string;
+      id: string;
+      body: UpdateStudentInput;
+    }) =>
+      request<StudentDetail>(`/students/${encodeURIComponent(input.id)}`, {
+        method: 'PUT',
+        token: input.token,
+        body: input.body,
+      }),
   },
 
   notifications: {
@@ -1398,6 +1431,27 @@ export const api = {
           type: input.type,
         },
       }),
+
+    send: (input: {
+      token: string;
+      title: string;
+      message: string;
+      type?: NotificationType;
+      targetUserId?: string;
+      deepLink?: string;
+    }) =>
+      request<MessageResponseData>('/notifications/send', {
+        method: 'POST',
+        token: input.token,
+        body: {
+          title: input.title,
+          message: input.message,
+          type: input.type || 'general',
+          targetUserId: input.targetUserId,
+          deepLink: input.deepLink,
+        },
+      }),
+
 
     unreadCount: (input: {token: string; signal?: AbortSignal}) =>
       request<UnreadCountData>('/notifications/unread-count', {

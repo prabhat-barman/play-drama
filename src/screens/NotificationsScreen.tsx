@@ -5,10 +5,12 @@ import {
   FlatList,
   Image,
   ListRenderItemInfo,
+  Modal,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -19,8 +21,10 @@ import {
   ChevronLeftIcon,
   CheckIcon,
   CrownIcon,
+  PlusIcon,
   SlidersIcon,
 } from '../components/icons';
+
 import {PrimaryButton} from '../components/PrimaryButton';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 import {ApiError, api, type AppNotification} from '../lib/api';
@@ -41,6 +45,13 @@ export function NotificationsScreen({navigation}: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Send Notification Modal State
+  const [sendModalVisible, setSendModalVisible] = useState(false);
+  const [sendTitle, setSendTitle] = useState('');
+  const [sendMessageText, setSendMessageText] = useState('');
+  const [sending, setSending] = useState(false);
+
 
   const fetchAll = useCallback(
     async (opts: {silent?: boolean} = {}) => {
@@ -69,6 +80,36 @@ export function NotificationsScreen({navigation}: Props) {
     },
     [token],
   );
+
+  const handleSendNotification = useCallback(async () => {
+    if (!token) return;
+    if (!sendTitle.trim() || !sendMessageText.trim()) {
+      Alert.alert('Validation Error', 'Title and message are required.');
+      return;
+    }
+    setSending(true);
+    try {
+      await api.notifications.send({
+        token,
+        title: sendTitle.trim(),
+        message: sendMessageText.trim(),
+        type: 'general',
+      });
+      setSendModalVisible(false);
+      setSendTitle('');
+      setSendMessageText('');
+      Alert.alert('Success', 'Notification sent successfully!');
+      void fetchAll({silent: true});
+    } catch (err) {
+      Alert.alert(
+        'Error',
+        err instanceof ApiError ? err.message : 'Could not send notification',
+      );
+    } finally {
+      setSending(false);
+    }
+  }, [token, sendTitle, sendMessageText, fetchAll]);
+
 
   useEffect(() => {
     void fetchAll();
@@ -174,19 +215,28 @@ export function NotificationsScreen({navigation}: Props) {
           <ChevronLeftIcon />
         </Pressable>
         <Text style={styles.brand}>PLAY DRAMA</Text>
-        <Pressable
-          style={styles.iconBtn}
-          hitSlop={8}
-          onPress={onMarkAllRead}
-          disabled={unreadCount === 0}>
-          <SlidersIcon
-            size={20}
-            color={
-              unreadCount === 0 ? colors.textMuted : colors.textPrimary
-            }
-          />
-        </Pressable>
+        <View style={{flexDirection: 'row', gap: 12, alignItems: 'center'}}>
+          <Pressable
+            style={styles.iconBtn}
+            hitSlop={8}
+            onPress={() => setSendModalVisible(true)}>
+            <PlusIcon size={20} color={colors.brand} />
+          </Pressable>
+          <Pressable
+            style={styles.iconBtn}
+            hitSlop={8}
+            onPress={onMarkAllRead}
+            disabled={unreadCount === 0}>
+            <SlidersIcon
+              size={20}
+              color={
+                unreadCount === 0 ? colors.textMuted : colors.textPrimary
+              }
+            />
+          </Pressable>
+        </View>
       </View>
+
 
       <View style={styles.tabs}>
         <Pressable
@@ -297,8 +347,65 @@ export function NotificationsScreen({navigation}: Props) {
           </Text>
         </View>
       )}
+
+      {/* Send Notification Modal */}
+      <Modal
+        visible={sendModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSendModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Send Notification API</Text>
+
+            <View style={styles.modalField}>
+              <Text style={styles.modalLabel}>Notification Title *</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={sendTitle}
+                onChangeText={setSendTitle}
+                placeholder="e.g. New Web Series Released!"
+                placeholderTextColor={colors.textMuted}
+              />
+            </View>
+
+            <View style={styles.modalField}>
+              <Text style={styles.modalLabel}>Message / Body *</Text>
+              <TextInput
+                style={[styles.modalInput, {height: 80, textAlignVertical: 'top'}]}
+                value={sendMessageText}
+                onChangeText={setSendMessageText}
+                multiline
+                numberOfLines={3}
+                placeholder="e.g. Watch the latest season of drama series now on PlayDrama."
+                placeholderTextColor={colors.textMuted}
+              />
+            </View>
+
+            <View style={styles.modalActionRow}>
+              <Pressable
+                onPress={() => setSendModalVisible(false)}
+                style={styles.modalCancelBtn}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleSendNotification}
+                disabled={sending}
+                style={[styles.modalSubmitBtn, sending && {opacity: 0.6}]}>
+                {sending ? (
+                  <ActivityIndicator color={colors.brandText} size="small" />
+                ) : (
+                  <Text style={styles.modalSubmitText}>Send Push API</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
+
 }
 
 // ------------------------------
@@ -725,4 +832,74 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    padding: spacing.md,
+  },
+  modalContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  modalTitle: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: spacing.md,
+  },
+  modalField: {
+    marginBottom: spacing.md,
+  },
+  modalLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  modalInput: {
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    color: colors.textPrimary,
+    fontSize: 14,
+    paddingHorizontal: spacing.md,
+    height: 46,
+  },
+  modalActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: spacing.sm,
+  },
+  modalCancelBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalSubmitBtn: {
+    backgroundColor: colors.brand,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSubmitText: {
+    color: colors.brandText,
+    fontSize: 14,
+    fontWeight: '700',
+  },
 });
+

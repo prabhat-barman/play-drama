@@ -201,6 +201,12 @@ export function ProfileScreen({navigation}: Props) {
 
         <Section title="Account">
           <Row
+            icon={<EditIcon size={18} color={colors.textPrimary} />}
+            label="Edit Profile"
+            hint="Update full name & phone"
+            onPress={() => navigation.navigate('EditProfile')}
+          />
+          <Row
             icon={<MailIcon size={18} color={colors.textPrimary} />}
             label="Email"
             hint={displayEmail}
@@ -209,14 +215,15 @@ export function ProfileScreen({navigation}: Props) {
             icon={<EditIcon size={18} color={colors.textPrimary} />}
             label="Full Name"
             hint={displayName}
-            onPress={() => setEditing(true)}
+            onPress={() => navigation.navigate('EditProfile')}
           />
           <Row
             icon={<EditIcon size={18} color={colors.textPrimary} />}
             label="Phone"
             hint={displayPhone}
-            onPress={() => setEditing(true)}
+            onPress={() => navigation.navigate('EditProfile')}
           />
+
           <Row
             icon={<KeyIcon size={18} color={colors.textPrimary} />}
             label="Change Password"

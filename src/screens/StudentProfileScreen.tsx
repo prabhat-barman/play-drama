@@ -164,9 +164,27 @@ export function StudentProfileScreen({navigation}: Props) {
 
         <Section title="Account">
           <Row
+            icon={<UserIcon size={18} color={colors.brand} />}
+            label="View Public Actor Profile"
+            hint="See public actor profile page"
+            onPress={() =>
+              navigation.navigate('ActorProfile', {
+                studentId: user?.id || 'me',
+              })
+            }
+          />
+          <Row
+            icon={<UserIcon size={18} color={colors.textPrimary} />}
+            label="Edit Profile"
+            hint="Update info & academic details"
+            onPress={() => navigation.navigate('EditProfile')}
+          />
+
+          <Row
             icon={<UserIcon size={18} color={colors.textPrimary} />}
             label="Full Name"
             hint={displayName || '—'}
+            onPress={() => navigation.navigate('EditProfile')}
           />
           <Row
             icon={<MailIcon size={18} color={colors.textPrimary} />}
@@ -177,6 +195,7 @@ export function StudentProfileScreen({navigation}: Props) {
             icon={<MailIcon size={18} color={colors.textPrimary} />}
             label="Phone"
             hint={phone || 'Not provided'}
+            onPress={() => navigation.navigate('EditProfile')}
           />
           <Row
             icon={<KeyIcon size={18} color={colors.textPrimary} />}
@@ -184,6 +203,7 @@ export function StudentProfileScreen({navigation}: Props) {
             onPress={openChangePassword}
           />
         </Section>
+
 
         <Section title="App Settings">
           <Row
