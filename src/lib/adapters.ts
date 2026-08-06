@@ -56,7 +56,13 @@ export function webseriesToContent(w: any): ContentItem {
     genres: (w.genres ?? []).map(capitalize),
     poster: w.thumbnail || w.image || w.coverImage || '',
     backdrop: w.image || w.coverImage || w.thumbnail || '',
-    synopsis: w.description || '',
+    synopsis:
+      w.description ||
+      w.synopsis ||
+      w.summary ||
+      w.shortDescription ||
+      w.tagline ||
+      '',
     cast: castMemberNames(w.cast),
     maturity: w.ageRating,
     isNew: isRecent(w.releaseDate),

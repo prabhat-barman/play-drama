@@ -7,6 +7,7 @@ import {
 } from '@react-navigation/native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {RootNavigator, RootStackParamList} from './src/navigation/RootNavigator';
+import {AlertProvider} from './src/context/AlertContext';
 import {AuthProvider} from './src/context/AuthContext';
 import {NotificationsProvider} from './src/context/NotificationsContext';
 import {colors} from './src/theme/colors';
@@ -168,23 +169,25 @@ function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-      <AuthProvider>
-        <NotificationsProvider>
-          <NavigationContainer
-            ref={navRef}
-            theme={navTheme}
-            onReady={() => {
-              // The tap handler needs a live navigation ref. Registering it
-              // here (rather than in useEffect) means any push tap that
-              // arrives *before* the first render still lands correctly —
-              // pushNotifications.ts queues taps until a handler exists.
-              setNotificationTapHandler(handleNotificationTap);
-            }}>
-            <RootNavigator />
-            <AppUpdateManager />
-          </NavigationContainer>
-        </NotificationsProvider>
-      </AuthProvider>
+      <AlertProvider>
+        <AuthProvider>
+          <NotificationsProvider>
+            <NavigationContainer
+              ref={navRef}
+              theme={navTheme}
+              onReady={() => {
+                // The tap handler needs a live navigation ref. Registering it
+                // here (rather than in useEffect) means any push tap that
+                // arrives *before* the first render still lands correctly —
+                // pushNotifications.ts queues taps until a handler exists.
+                setNotificationTapHandler(handleNotificationTap);
+              }}>
+              <RootNavigator />
+              <AppUpdateManager />
+            </NavigationContainer>
+          </NotificationsProvider>
+        </AuthProvider>
+      </AlertProvider>
     </SafeAreaProvider>
   );
 }

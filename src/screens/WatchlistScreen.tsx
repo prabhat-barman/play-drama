@@ -10,7 +10,7 @@ import type {CompositeScreenProps} from '@react-navigation/native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {colors, spacing} from '../theme/colors';
-import {BookmarkIcon, DownloadIcon, EditIcon} from '../components/icons';
+import {BookmarkIcon, DownloadIcon} from '../components/icons';
 import type {MainTabParamList} from '../navigation/MainTabs';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 
@@ -34,10 +34,6 @@ export function WatchlistScreen({navigation}: Props) {
     <SafeAreaView style={styles.root} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.brand}>PLAY DRAMA</Text>
-        <Pressable hitSlop={8} style={styles.editBtn}>
-          <EditIcon size={16} color={colors.textMuted} />
-          <Text style={styles.editText}>EDIT</Text>
-        </Pressable>
       </View>
 
       <View style={styles.tabs}>

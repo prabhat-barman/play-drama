@@ -1,8 +1,11 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
   Image,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -22,11 +25,13 @@ import {colors, radius, spacing} from '../theme/colors';
 import {
   BellIcon,
   CastIcon,
+  CrownIcon,
   HeadphonesIcon,
   MicIcon,
   PlayIcon,
   PlusIcon,
   StarIcon,
+  UserIcon,
 } from '../components/icons';
 import {MovieRow} from '../components/MovieRow';
 import {SectionHeader} from '../components/SectionHeader';
@@ -48,13 +53,45 @@ type Props = CompositeScreenProps<
 const HERO_TABS = ['Movies', 'TV Shows', 'Categories'] as const;
 type HeroTab = (typeof HERO_TABS)[number];
 
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+type PopularActor = {
+  id: string;
+  name: string;
+  profileImage?: string;
+  bio?: string;
+  redirectType?: string;
+  redirectId?: string;
+};
+
+type FeaturedInstitute = {
+  id: string;
+  name: string;
+  logo?: string;
+  totalWebseries?: number;
+  redirectType?: string;
+  redirectId?: string;
+};
+
+type CategoryItem = {
+  id: string;
+  name: string;
+  count?: number;
+  redirectType?: string;
+  redirectId?: string;
+};
+
 type HomePayload = {
+  banner: ContentItem[];
   trending: ContentItem[];
   newReleases: ContentItem[];
   topRated: ContentItem[];
   recommended: ContentItem[];
   recentlyAdded: ContentItem[];
   popularDramas: ContentItem[];
+  popularActors: PopularActor[];
+  featuredInstitutes: FeaturedInstitute[];
+  categories: CategoryItem[];
   latest: ContentItem[];
   action: ContentItem[];
   drama: ContentItem[];
@@ -69,12 +106,16 @@ export function HomeScreen({navigation}: Props) {
     async (signal: AbortSignal): Promise<HomePayload> => {
       if (!token) {
         return {
+          banner: [],
           trending: [],
           newReleases: [],
           topRated: [],
           recommended: [],
           recentlyAdded: [],
           popularDramas: [],
+          popularActors: [],
+          featuredInstitutes: [],
+          categories: [],
           latest: [],
           action: [],
           drama: [],
@@ -153,6 +194,16 @@ export function HomeScreen({navigation}: Props) {
         ? homeAggregated.popularDramas.map(webseriesToContent)
         : [];
 
+      const popularActors: PopularActor[] = Array.isArray(homeAggregated.popularActors)
+        ? homeAggregated.popularActors
+        : [];
+      const featuredInstitutes: FeaturedInstitute[] = Array.isArray(homeAggregated.featuredInstitutes)
+        ? homeAggregated.featuredInstitutes
+        : [];
+      const categories: CategoryItem[] = Array.isArray(homeAggregated.categories)
+        ? homeAggregated.categories
+        : [];
+
       const trendingFinal =
         trendingFromApi.length > 0
           ? trendingFromApi
@@ -177,12 +228,16 @@ export function HomeScreen({navigation}: Props) {
           : unwrapList(dramaRes);
 
       return {
+        banner: bannerItems.length > 0 ? bannerItems : trendingFinal.slice(0, 5),
         trending: trendingFinal,
         newReleases: newReleasesFinal,
         topRated: topRatedHome,
         recommended: recommendedHome,
         recentlyAdded: recentlyAddedHome,
         popularDramas: popularDramasFinal,
+        popularActors,
+        featuredInstitutes,
+        categories,
         latest: latestItems,
         action: unwrapList(actionRes),
         drama: unwrapList(dramaRes),
@@ -193,7 +248,10 @@ export function HomeScreen({navigation}: Props) {
 
   const {data, loading, error, reload} = useApi(fetchHome, [token]);
 
-  const featured = data?.trending[0] ?? data?.latest[0];
+  const bannerItems = useMemo(
+    () => (data?.banner?.length ? data.banner : data?.trending.slice(0, 5) ?? []),
+    [data],
+  );
   const trending = useMemo(
     () => (data?.trending.length ? data.trending : data?.latest.slice(0, 10) ?? []),
     [data],
@@ -215,8 +273,8 @@ export function HomeScreen({navigation}: Props) {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}>
-        <HeroSection
-          featured={featured}
+        <HeroCarousel
+          bannerItems={bannerItems}
           loading={loading}
           error={error}
           onReload={reload}
@@ -235,6 +293,28 @@ export function HomeScreen({navigation}: Props) {
           </>
         ) : null}
 
+        {data?.categories?.length ? (
+          <View style={styles.sectionContainer}>
+            <SectionHeader title="Explore Categories" />
+            <FlatList
+              horizontal
+              data={data.categories}
+              keyExtractor={item => item.id || item.name}
+              contentContainerStyle={styles.hlist}
+              ItemSeparatorComponent={() => <View style={{width: 8}} />}
+              showsHorizontalScrollIndicator={false}
+              renderItem={({item}) => (
+                <Pressable style={styles.categoryChip}>
+                  <Text style={styles.categoryName}>{item.name}</Text>
+                  {typeof item.count === 'number' && item.count > 0 ? (
+                    <Text style={styles.categoryCount}>({item.count})</Text>
+                  ) : null}
+                </Pressable>
+              )}
+            />
+          </View>
+        ) : null}
+
         {trending.length ? (
           <MovieRow
             title="Trending Now"
@@ -251,12 +331,90 @@ export function HomeScreen({navigation}: Props) {
           />
         ) : null}
 
+        {data?.popularActors?.length ? (
+          <View style={styles.sectionContainer}>
+            <SectionHeader title="Popular Actors & Creators" />
+            <FlatList
+              horizontal
+              data={data.popularActors}
+              keyExtractor={(item, idx) => item.id || item.redirectId || `actor-${idx}`}
+              contentContainerStyle={styles.hlist}
+              ItemSeparatorComponent={() => <View style={{width: 14}} />}
+              showsHorizontalScrollIndicator={false}
+              renderItem={({item}) => (
+                <Pressable
+                  onPress={() => {
+                    const actorId = item.redirectId || item.id;
+                    if (actorId) {
+                      navigation.navigate('ActorProfile', {studentId: actorId});
+                    }
+                  }}
+                  style={styles.actorCard}>
+                  {item.profileImage ? (
+                    <Image source={{uri: item.profileImage}} style={styles.actorAvatar} />
+                  ) : (
+                    <View style={styles.actorAvatarPlaceholder}>
+                      <UserIcon size={22} color={colors.textPrimary} />
+                    </View>
+                  )}
+                  <Text style={styles.actorName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.actorBio} numberOfLines={1}>
+                    {item.bio || 'Creator / Actor'}
+                  </Text>
+                </Pressable>
+              )}
+            />
+          </View>
+        ) : null}
+
         {data?.topRated?.length ? (
           <MovieRow
             title="Top Rated"
             movies={data.topRated}
             onPressMovie={m => openMovie(m.id)}
           />
+        ) : null}
+
+        {data?.featuredInstitutes?.length ? (
+          <View style={styles.sectionContainer}>
+            <SectionHeader title="Featured Studios & Institutes" />
+            <FlatList
+              horizontal
+              data={data.featuredInstitutes}
+              keyExtractor={(item, idx) => item.id || item.redirectId || `inst-${idx}`}
+              contentContainerStyle={styles.hlist}
+              ItemSeparatorComponent={() => <View style={{width: 12}} />}
+              showsHorizontalScrollIndicator={false}
+              renderItem={({item}) => (
+                <Pressable
+                  onPress={() => {
+                    const instId = item.redirectId || item.id;
+                    if (instId) {
+                      navigation.navigate('InstituteProfile', {instituteId: instId});
+                    }
+                  }}
+                  style={styles.instituteCard}>
+                  {item.logo ? (
+                    <Image source={{uri: item.logo}} style={styles.instituteLogo} />
+                  ) : (
+                    <View style={styles.instituteLogoPlaceholder}>
+                      <CrownIcon size={20} color="#ffb400" />
+                    </View>
+                  )}
+                  <View style={styles.instituteInfo}>
+                    <Text style={styles.instituteName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.instituteCount}>
+                      {item.totalWebseries ?? 0} Series
+                    </Text>
+                  </View>
+                </Pressable>
+              )}
+            />
+          </View>
         ) : null}
 
         {data?.recommended?.length ? (
@@ -359,7 +517,7 @@ export function HomeScreen({navigation}: Props) {
 }
 
 type HeroProps = {
-  featured?: ContentItem;
+  bannerItems: ContentItem[];
   loading: boolean;
   error: string | null;
   onReload: () => void;
@@ -371,8 +529,8 @@ type HeroProps = {
   unreadCount: number;
 };
 
-function HeroSection({
-  featured,
+function HeroCarousel({
+  bannerItems,
   loading,
   error,
   onReload,
@@ -389,29 +547,145 @@ function HeroSection({
     Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 12,
   );
 
+  const flatListRef = useRef<FlatList<ContentItem>>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // Auto-scroll carousel every 4.5 seconds
+  useEffect(() => {
+    if (!bannerItems.length || bannerItems.length <= 1) return;
+    const timer = setInterval(() => {
+      setActiveIndex(prev => {
+        const next = (prev + 1) % bannerItems.length;
+        flatListRef.current?.scrollToIndex({
+          index: next,
+          animated: true,
+        });
+        return next;
+      });
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [bannerItems.length]);
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const slide = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    if (slide !== activeIndex && slide >= 0 && slide < bannerItems.length) {
+      setActiveIndex(slide);
+    }
+  };
+
   return (
     <View style={styles.hero}>
-      {featured ? (
-        <Image
-          source={{uri: featured.backdrop}}
-          style={styles.heroImg}
-          resizeMode="cover"
-        />
-      ) : (
+      {loading && !bannerItems.length ? (
         <View style={[styles.heroImg, styles.heroSkeleton]} />
-      )}
-      <LinearGradient
-        colors={[
-          'rgba(10,10,10,0.35)',
-          'rgba(10,10,10,0)',
-          'rgba(10,10,10,0.9)',
-          colors.background,
-        ]}
-        locations={[0, 0.35, 0.85, 1]}
-        style={StyleSheet.absoluteFill}
-      />
+      ) : error && !bannerItems.length ? (
+        <View style={styles.heroError}>
+          <Text style={styles.errorText} numberOfLines={2}>
+            {error}
+          </Text>
+          <Pressable onPress={onReload} style={styles.retryBtn}>
+            <Text style={styles.retryText}>Retry</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          data={bannerItems}
+          keyExtractor={(item, index) => item.id || `banner-${index}`}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          getItemLayout={(_, index) => ({
+            length: SCREEN_WIDTH,
+            offset: SCREEN_WIDTH * index,
+            index,
+          })}
+          renderItem={({item}) => (
+            <View style={{width: SCREEN_WIDTH, height: 560, justifyContent: 'flex-end'}}>
+              <Image
+                source={{uri: item.backdrop || item.poster}}
+                style={styles.heroImg}
+                resizeMode="cover"
+              />
+              <LinearGradient
+                colors={[
+                  'rgba(10,10,10,0.35)',
+                  'rgba(10,10,10,0)',
+                  'rgba(10,10,10,0.85)',
+                  colors.background,
+                ]}
+                locations={[0, 0.35, 0.85, 1]}
+                style={StyleSheet.absoluteFill}
+              />
 
-      <View style={styles.heroTopBar}>
+              <View style={styles.heroBody}>
+                {item.isNew ? (
+                  <View style={styles.newBadge}>
+                    <Text style={styles.newBadgeText}>NEW RELEASE</Text>
+                  </View>
+                ) : null}
+                <Text style={styles.heroTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <View style={styles.metaRow}>
+                  <StarIcon />
+                  <Text style={styles.metaText}>{item.year ?? '—'}</Text>
+                  {item.genres[0] ? (
+                    <>
+                      <View style={styles.dot} />
+                      <Text style={styles.metaText}>{item.genres[0]}</Text>
+                    </>
+                  ) : null}
+                  {item.totalEpisodes ? (
+                    <>
+                      <View style={styles.dot} />
+                      <Text style={styles.metaText}>
+                        {item.totalEpisodes} Episodes
+                      </Text>
+                    </>
+                  ) : null}
+                  {item.maturity ? (
+                    <>
+                      <View style={styles.dot} />
+                      <Text style={styles.metaText}>{item.maturity}</Text>
+                    </>
+                  ) : null}
+                </View>
+
+                <Text style={styles.heroTagline} numberOfLines={2} ellipsizeMode="tail">
+                  {item.synopsis ||
+                    'An extraordinary story of courage, passion, and unforgettable moments unfolding against all odds.'}
+                </Text>
+
+                <View style={styles.heroActions}>
+                  <Pressable
+                    onPress={() => onPlay(item.id)}
+                    style={({pressed}) => [
+                      styles.playBtn,
+                      pressed && styles.pressed,
+                    ]}>
+                    <PlayIcon size={16} color={colors.brandText} />
+                    <Text style={styles.playText}>Play</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => onOpen(item.id)}
+                    style={({pressed}) => [
+                      styles.listBtn,
+                      pressed && styles.pressed,
+                    ]}>
+                    <PlusIcon size={16} />
+                    <Text style={styles.listText}>Details</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          )}
+        />
+      )}
+
+      {/* Top Header Bar Overlay */}
+      <View style={styles.heroTopBar} pointerEvents="box-none">
         <View style={[styles.heroHeader, {paddingTop: topInset + 6}]}>
           <Text style={styles.brand}>PLAY DRAMA</Text>
 
@@ -441,8 +715,7 @@ function HeroSection({
                 style={styles.chip}
                 hitSlop={4}
                 onPress={() => onChangeTab(c)}>
-                <Text
-                  style={[styles.chipText, active && styles.chipTextActive]}>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>
                   {c}
                 </Text>
                 {active ? <View style={styles.chipUnderline} /> : null}
@@ -453,85 +726,20 @@ function HeroSection({
         <View style={styles.chipsDivider} />
       </View>
 
-
-      <View style={styles.heroBody}>
-        {loading && !featured ? (
-          <View style={{gap: 10, paddingBottom: spacing.sm}}>
-            <Skeleton width={110} height={20} borderRadius={4} />
-            <Skeleton width="75%" height={32} borderRadius={6} />
-            <Skeleton width="50%" height={14} borderRadius={4} />
-            <Skeleton width="100%" height={40} borderRadius={6} style={{marginTop: 6}} />
-          </View>
-        ) : error && !featured ? (
-          <View style={styles.heroError}>
-            <Text style={styles.errorText} numberOfLines={2}>
-              {error}
-            </Text>
-            <Pressable onPress={onReload} style={styles.retryBtn}>
-              <Text style={styles.retryText}>Retry</Text>
-            </Pressable>
-          </View>
-        ) : featured ? (
-          <>
-            {featured.isNew ? (
-              <View style={styles.newBadge}>
-                <Text style={styles.newBadgeText}>NEW RELEASE</Text>
-              </View>
-            ) : null}
-            <Text style={styles.heroTitle}>{featured.title}</Text>
-            <View style={styles.metaRow}>
-              <StarIcon />
-              <Text style={styles.metaText}>
-                {featured.year ?? '—'}
-              </Text>
-              {featured.genres[0] ? (
-                <>
-                  <View style={styles.dot} />
-                  <Text style={styles.metaText}>{featured.genres[0]}</Text>
-                </>
-              ) : null}
-              {featured.totalEpisodes ? (
-                <>
-                  <View style={styles.dot} />
-                  <Text style={styles.metaText}>
-                    {featured.totalEpisodes} Episodes
-                  </Text>
-                </>
-              ) : null}
-              {featured.maturity ? (
-                <>
-                  <View style={styles.dot} />
-                  <Text style={styles.metaText}>{featured.maturity}</Text>
-                </>
-              ) : null}
-            </View>
-            <Text style={styles.heroTagline} numberOfLines={2}>
-              {featured.synopsis}
-            </Text>
-
-            <View style={styles.heroActions}>
-              <Pressable
-                onPress={() => onPlay(featured.id)}
-                style={({pressed}) => [
-                  styles.playBtn,
-                  pressed && styles.pressed,
-                ]}>
-                <PlayIcon size={16} color={colors.brandText} />
-                <Text style={styles.playText}>Play</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => onOpen(featured.id)}
-                style={({pressed}) => [
-                  styles.listBtn,
-                  pressed && styles.pressed,
-                ]}>
-                <PlusIcon size={16} />
-                <Text style={styles.listText}>Details</Text>
-              </Pressable>
-            </View>
-          </>
-        ) : null}
-      </View>
+      {/* Carousel Pagination Dots */}
+      {bannerItems.length > 1 ? (
+        <View style={styles.carouselDots} pointerEvents="none">
+          {bannerItems.map((_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.carouselDot,
+                i === activeIndex && styles.carouselDotActive,
+              ]}
+            />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -556,14 +764,11 @@ const styles = StyleSheet.create({
   heroSkeleton: {
     backgroundColor: colors.surface,
   },
-  heroLoading: {
-    paddingVertical: spacing.md,
-    alignItems: 'flex-start',
-  },
   heroError: {
     alignItems: 'flex-start',
     gap: spacing.sm,
     paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
   errorText: {
     color: colors.textPrimary,
@@ -608,17 +813,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
-  },
-  bellDot: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.brand,
-    borderWidth: 1,
-    borderColor: colors.background,
   },
   bellBadge: {
     position: 'absolute',
@@ -675,7 +869,7 @@ const styles = StyleSheet.create({
   },
   heroBody: {
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.lg + 4,
   },
   newBadge: {
     alignSelf: 'flex-start',
@@ -693,7 +887,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: colors.textPrimary,
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '800',
     letterSpacing: -0.5,
     marginBottom: spacing.sm - 2,
@@ -760,8 +954,124 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  carouselDots: {
+    position: 'absolute',
+    bottom: 12,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  carouselDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  carouselDotActive: {
+    width: 18,
+    backgroundColor: colors.brand,
+  },
+  sectionContainer: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  hlist: {
+    paddingHorizontal: spacing.md,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    backgroundColor: colors.glassBg,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  categoryName: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  categoryCount: {
+    color: colors.textMuted,
+    fontSize: 11,
+  },
+  actorCard: {
+    width: 96,
+    alignItems: 'center',
+  },
+  actorAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.surface,
+    marginBottom: 6,
+  },
+  actorAvatarPlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.glassBg,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  actorName: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  actorBio: {
+    color: colors.textMuted,
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 1,
+  },
+  instituteCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: radius.md,
+    backgroundColor: colors.glassBg,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    minWidth: 180,
+  },
+  instituteLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+  },
+  instituteLogoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,180,0,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  instituteInfo: {
+    flex: 1,
+  },
+  instituteName: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  instituteCount: {
+    color: colors.textMuted,
+    fontSize: 11,
+    marginTop: 2,
+  },
   pressed: {opacity: 0.85, transform: [{scale: 0.98}]},
-  hlist: {paddingHorizontal: spacing.md},
   podcastCard: {
     width: 160,
     borderRadius: radius.md,
@@ -798,29 +1108,29 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
   },
-  audioSection: {marginTop: spacing.lg},
+  audioSection: {paddingHorizontal: spacing.md, marginTop: spacing.sm},
   audioCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.sm + 2,
     padding: 10,
     borderRadius: radius.md,
     backgroundColor: colors.glassBg,
     borderWidth: 1,
     borderColor: colors.glassBorder,
+    marginBottom: 10,
+    gap: 12,
   },
   audioImg: {
-    width: 60,
-    height: 60,
+    width: 56,
+    height: 56,
     borderRadius: radius.sm,
     backgroundColor: colors.surface,
   },
-  audioBody: {flex: 1, marginLeft: spacing.md},
+  audioBody: {flex: 1},
   audioTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     marginBottom: 2,
   },
   audioBadge: {
@@ -831,20 +1141,19 @@ const styles = StyleSheet.create({
   },
   audioTitle: {
     color: colors.textPrimary,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
   },
   audioDesc: {
     color: colors.textMuted,
     fontSize: 11,
     marginTop: 2,
-    lineHeight: 15,
   },
   audioPlay: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#fff7f6',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },

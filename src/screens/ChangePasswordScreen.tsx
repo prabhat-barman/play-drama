@@ -8,6 +8,7 @@ import {LockIcon} from '../components/icons';
 import {colors, spacing} from '../theme/colors';
 import {ApiError} from '../lib/api';
 import {useAuth} from '../context/AuthContext';
+import {useAlert} from '../context/AlertContext';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChangePassword'>;
@@ -16,6 +17,7 @@ const MIN_PASSWORD = 6;
 
 export function ChangePasswordScreen({navigation}: Props) {
   const {changePassword} = useAuth();
+  const {showAlert} = useAlert();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -24,10 +26,6 @@ export function ChangePasswordScreen({navigation}: Props) {
 
   const passwordsMatch = next.length > 0 && next === confirm;
   const differentFromCurrent = current.length > 0 && next !== current;
-  // Only require that all three inputs have SOMETHING typed so the button
-  // isn't confusingly disabled. Length + match + different-from-current
-  // are validated on submit and surfaced as inline errors — the user
-  // doesn't get pre-scolded while they're mid-typing.
   const canSubmit =
     current.length > 0 && next.length > 0 && confirm.length > 0 && !busy;
 
@@ -36,8 +34,6 @@ export function ChangePasswordScreen({navigation}: Props) {
       return;
     }
     setError(null);
-    // Validate on tap, not on every keystroke — this matches the user
-    // request to only show the "min 6" hint after they press Submit.
     if (current.length === 0) {
       setError('Enter your current password.');
       return;
@@ -57,8 +53,17 @@ export function ChangePasswordScreen({navigation}: Props) {
     setBusy(true);
     try {
       await changePassword({currentPassword: current, newPassword: next});
-      // On success AuthContext signs the user out; root navigator will swap to
-      // the Auth stack automatically. No manual navigation needed.
+      showAlert({
+        title: 'Password Updated',
+        message: 'Your password has been updated successfully!',
+        type: 'success',
+        buttons: [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ],
+      });
     } catch (err) {
       const message =
         err instanceof ApiError
@@ -76,8 +81,7 @@ export function ChangePasswordScreen({navigation}: Props) {
     <AuthLayout>
       <Text style={styles.heading}>Change Password</Text>
       <Text style={styles.subheading}>
-        For your security you&apos;ll be signed out on this and all other
-        devices after changing your password.
+        Enter your current password and choose a new secure password.
       </Text>
 
       <View style={styles.inputs}>

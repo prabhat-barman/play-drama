@@ -262,6 +262,8 @@ export type StudentInstituteSummary = {
 };
 
 export type StudentDetail = Student & {
+  phone?: string;
+  email?: string;
   bio?: string;
   skills?: string[];
   socialLinks?: StudentSocialLink[];
@@ -1926,6 +1928,65 @@ export const api = {
 
   // ---- Phase 7: Discover ----
   discover: {
+    feed: (input: {token?: string | null; signal?: AbortSignal}) =>
+      request<{
+        sections: Record<
+          string,
+          {
+            title: string;
+            type: string;
+            items: any[];
+            pagination?: {limit: number; offset: number; total: number; hasNext: boolean};
+          }
+        >;
+      }>('/discover', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+      }),
+
+    search: (input: {
+      token?: string | null;
+      q?: string;
+      genre?: string;
+      type?: string;
+      signal?: AbortSignal;
+    }) =>
+      request<{
+        sections: Record<
+          string,
+          {
+            title: string;
+            type: string;
+            items: any[];
+            pagination?: {limit: number; offset: number; total: number; hasNext: boolean};
+          }
+        >;
+      }>('/discover/search', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+        query: {
+          q: input.q,
+          genre: input.genre,
+          type: input.type,
+        },
+      }),
+
+    section: (input: {
+      token?: string | null;
+      section: string;
+      limit?: number;
+      offset?: number;
+      signal?: AbortSignal;
+    }) =>
+      request<any>(`/discover/${encodeURIComponent(input.section)}`, {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+        query: {limit: input.limit, offset: input.offset},
+      }),
+
     genres: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
       request<Genre[]>('/genres', {
         method: 'GET',

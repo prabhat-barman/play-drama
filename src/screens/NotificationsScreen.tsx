@@ -30,6 +30,7 @@ import type {RootStackParamList} from '../navigation/RootNavigator';
 import {ApiError, api, type AppNotification} from '../lib/api';
 import {useAuth} from '../context/AuthContext';
 import {useNotificationsBadge} from '../context/NotificationsContext';
+import {useAlert} from '../context/AlertContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Notifications'>;
 type Tab = 'notifications' | 'premium';
@@ -39,6 +40,7 @@ const PAGE_LIMIT = 30;
 export function NotificationsScreen({navigation}: Props) {
   const {token} = useAuth();
   const {refresh: refreshBadge, markLocal} = useNotificationsBadge();
+  const {showAlert} = useAlert();
 
   const [tab, setTab] = useState<Tab>('notifications');
   const [items, setItems] = useState<AppNotification[]>([]);
@@ -84,7 +86,11 @@ export function NotificationsScreen({navigation}: Props) {
   const handleSendNotification = useCallback(async () => {
     if (!token) return;
     if (!sendTitle.trim() || !sendMessageText.trim()) {
-      Alert.alert('Validation Error', 'Title and message are required.');
+      showAlert({
+        title: 'Validation Error',
+        message: 'Title and message are required.',
+        type: 'error',
+      });
       return;
     }
     setSending(true);
@@ -98,17 +104,23 @@ export function NotificationsScreen({navigation}: Props) {
       setSendModalVisible(false);
       setSendTitle('');
       setSendMessageText('');
-      Alert.alert('Success', 'Notification sent successfully!');
+      showAlert({
+        title: 'Success',
+        message: 'Notification sent successfully!',
+        type: 'success',
+      });
       void fetchAll({silent: true});
     } catch (err) {
-      Alert.alert(
-        'Error',
-        err instanceof ApiError ? err.message : 'Could not send notification',
-      );
+      showAlert({
+        title: 'Error',
+        message:
+          err instanceof ApiError ? err.message : 'Could not send notification',
+        type: 'error',
+      });
     } finally {
       setSending(false);
     }
-  }, [token, sendTitle, sendMessageText, fetchAll]);
+  }, [token, sendTitle, sendMessageText, fetchAll, showAlert]);
 
 
   useEffect(() => {

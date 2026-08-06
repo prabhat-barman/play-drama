@@ -18,29 +18,81 @@ import {ChevronLeftIcon, CheckIcon} from '../components/icons';
 
 import {api, ApiError} from '../lib/api';
 import {useAuth} from '../context/AuthContext';
+import {useAlert} from '../context/AlertContext';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EditProfile'>;
 
 export function EditProfileScreen({navigation}: Props) {
-  const {user, token} = useAuth();
+  const {user, token, refreshProfile, updateProfile} = useAuth();
+  const {showAlert} = useAlert();
 
+  const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState(user?.name ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
-  const [course, setCourse] = useState('Acting & Performing Arts');
-  const [department, setDepartment] = useState('Drama');
-  const [batch, setBatch] = useState('2024');
-  const [semester, setSemester] = useState('4');
-  const [bio, setBio] = useState('Passionate actor and performer.');
-  const [skills, setSkills] = useState('Acting, Voiceover, Stage Drama');
+  const [course, setCourse] = useState('');
+  const [department, setDepartment] = useState('');
+  const [batch, setBatch] = useState('');
+  const [semester, setSemester] = useState('');
+  const [bio, setBio] = useState('');
+  const [skills, setSkills] = useState('');
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const loadProfileData = useCallback(async (signal?: AbortSignal) => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      if (user?.role === 'STUDENT' && user.id) {
+        const studentDetail = await api.students.get({token, id: user.id, signal});
+        if (signal?.aborted) return;
+        if (studentDetail) {
+          setFullName(studentDetail.fullName || user.name || '');
+          setPhone(studentDetail.phone || user.phone || '');
+          setEmail(studentDetail.email || user.email || '');
+          setCourse(studentDetail.course || '');
+          setDepartment(studentDetail.department || '');
+          setBatch(studentDetail.batch || '');
+          setSemester(studentDetail.semester || '');
+          setBio(studentDetail.bio || '');
+          setSkills(studentDetail.skills?.join(', ') || '');
+        }
+      } else {
+        const p = await api.profile.get({token, signal});
+        if (signal?.aborted) return;
+        if (p) {
+          setFullName(p.fullName || user?.name || '');
+          setPhone(p.phone || user?.phone || '');
+          setEmail(p.email || user?.email || '');
+        }
+      }
+    } catch {
+      // Best effort; keep context values if fetch fails
+    } finally {
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
+    }
+  }, [token, user]);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    loadProfileData(controller.signal);
+    return () => controller.abort();
+  }, [loadProfileData]);
+
   const handleSave = useCallback(async () => {
     if (!token || !user?.id) {
-      Alert.alert('Error', 'You must be logged in to update your profile.');
+      showAlert({
+        title: 'Error',
+        message: 'You must be logged in to update your profile.',
+        type: 'error',
+      });
       return;
     }
 
@@ -73,16 +125,20 @@ export function EditProfileScreen({navigation}: Props) {
           },
         });
       } else {
-        await api.profile.update({
-          token,
+        await updateProfile({
           fullName: fullName.trim(),
           phone: phone.trim() || undefined,
         });
       }
 
-      Alert.alert('Success', 'Profile updated successfully!', [
-        {text: 'OK', onPress: () => navigation.goBack()},
-      ]);
+      await refreshProfile();
+
+      showAlert({
+        title: 'Success',
+        message: 'Profile updated successfully!',
+        type: 'success',
+        buttons: [{text: 'OK', onPress: () => navigation.goBack()}],
+      });
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : 'Failed to update profile',
@@ -90,7 +146,7 @@ export function EditProfileScreen({navigation}: Props) {
     } finally {
       setSaving(false);
     }
-  }, [token, user, fullName, phone, email, course, department, batch, semester, bio, skills, navigation]);
+  }, [token, user, fullName, phone, email, course, department, batch, semester, bio, skills, navigation, updateProfile, refreshProfile, showAlert]);
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -126,6 +182,12 @@ export function EditProfileScreen({navigation}: Props) {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}>
+          {loading ? (
+            <View style={{paddingVertical: spacing.md, alignItems: 'center'}}>
+              <ActivityIndicator size="small" color={colors.brand} />
+            </View>
+          ) : null}
+
           {error ? (
             <View style={styles.errorBanner}>
               <Text style={styles.errorText}>{error}</Text>
@@ -161,9 +223,10 @@ export function EditProfileScreen({navigation}: Props) {
             <View style={styles.fieldWrap}>
               <Text style={styles.label}>Phone Number</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, styles.disabledInput]}
                 value={phone}
                 onChangeText={setPhone}
+                editable={false}
                 keyboardType="phone-pad"
                 placeholder="+919876543210"
                 placeholderTextColor={colors.textMuted}

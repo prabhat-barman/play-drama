@@ -26,6 +26,7 @@ import {
   WifiIcon,
 } from '../components/icons';
 import {useAuth} from '../context/AuthContext';
+import {useAlert} from '../context/AlertContext';
 import {api, ApiError, mePayloadToPublicUser} from '../lib/api';
 import type {StudentTabParamList} from '../navigation/StudentTabs';
 import type {RootStackParamList} from '../navigation/RootNavigator';
@@ -43,6 +44,7 @@ type Props = CompositeScreenProps<
 // with the MOBILE_USER experience.
 export function StudentProfileScreen({navigation}: Props) {
   const {user, token, signOut} = useAuth();
+  const {showAlert} = useAlert();
   const [wifiOnly, setWifiOnly] = useState(true);
   const [phone, setPhone] = useState<string | null>(user?.phone ?? null);
   const [displayName, setDisplayName] = useState<string>(user?.name ?? '');
@@ -67,12 +69,11 @@ export function StudentProfileScreen({navigation}: Props) {
         setDisplayName(fresh.name);
         setPhone(fresh.phone ?? null);
       } catch (err) {
-        if (cancelledRef?.current) {
-          return;
+        if (!cancelledRef?.current) {
+          setError(
+            err instanceof ApiError ? err.message : 'Could not load profile',
+          );
         }
-        setError(
-          err instanceof ApiError ? err.message : 'Could not load profile',
-        );
       } finally {
         if (!cancelledRef?.current) {
           setLoading(false);
@@ -103,10 +104,11 @@ export function StudentProfileScreen({navigation}: Props) {
   );
 
   const logout = useCallback(() => {
-    Alert.alert(
-      'Log out?',
-      'You will need to sign in again to access your student profile.',
-      [
+    showAlert({
+      title: 'Log out?',
+      message: 'You will need to sign in again to access your student profile.',
+      type: 'logout',
+      buttons: [
         {text: 'Cancel', style: 'cancel'},
         {
           text: 'Log Out',
@@ -116,9 +118,8 @@ export function StudentProfileScreen({navigation}: Props) {
           },
         },
       ],
-      {cancelable: true},
-    );
-  }, [signOut]);
+    });
+  }, [signOut, showAlert]);
 
   const openChangePassword = () => navigation.navigate('ChangePassword');
 

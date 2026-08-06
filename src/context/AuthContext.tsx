@@ -394,11 +394,8 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
         currentPassword,
         newPassword,
       });
-      // Server bumped tokenVersion; existing tokens are now invalid on other
-      // devices. On this device we sign out so the user re-authenticates.
-      await clearSession();
     },
-    [clearSession],
+    [],
   );
 
   const refreshProfile = useCallback<

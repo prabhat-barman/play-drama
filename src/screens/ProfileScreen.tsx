@@ -24,11 +24,14 @@ import {
   KeyIcon,
   LogOutIcon,
   MailIcon,
+  PhoneIcon,
   ShieldIcon,
   SlidersIcon,
+  UserIcon,
   WifiIcon,
 } from '../components/icons';
 import {useAuth} from '../context/AuthContext';
+import {useAlert} from '../context/AlertContext';
 import {api, ApiError, type MobileUserProfile} from '../lib/api';
 import type {MainTabParamList} from '../navigation/MainTabs';
 import type {RootStackParamList} from '../navigation/RootNavigator';
@@ -40,6 +43,7 @@ type Props = CompositeScreenProps<
 
 export function ProfileScreen({navigation}: Props) {
   const {user, token, signOut, updateProfile} = useAuth();
+  const {showAlert} = useAlert();
   const [wifiOnly, setWifiOnly] = useState(true);
   const [profile, setProfile] = useState<MobileUserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
@@ -99,10 +103,11 @@ export function ProfileScreen({navigation}: Props) {
   const isAdmin = user?.role === 'admin';
 
   const logout = useCallback(() => {
-    Alert.alert(
-      'Log out?',
-      'You will need to sign in again to access your watchlist, downloads and preferences.',
-      [
+    showAlert({
+      title: 'Log out?',
+      message: 'You will need to sign in again to access your watchlist, downloads and preferences.',
+      type: 'logout',
+      buttons: [
         {text: 'Cancel', style: 'cancel'},
         {
           text: 'Log Out',
@@ -112,9 +117,8 @@ export function ProfileScreen({navigation}: Props) {
           },
         },
       ],
-      {cancelable: true},
-    );
-  }, [signOut]);
+    });
+  }, [signOut, showAlert]);
 
   const openChangePassword = () => {
     navigation.navigate('ChangePassword');
@@ -203,8 +207,13 @@ export function ProfileScreen({navigation}: Props) {
           <Row
             icon={<EditIcon size={18} color={colors.textPrimary} />}
             label="Edit Profile"
-            hint="Update full name & phone"
+            hint="Update info & academic details"
             onPress={() => navigation.navigate('EditProfile')}
+          />
+          <Row
+            icon={<UserIcon size={18} color={colors.textPrimary} />}
+            label="Full Name"
+            hint={displayName}
           />
           <Row
             icon={<MailIcon size={18} color={colors.textPrimary} />}
@@ -212,16 +221,9 @@ export function ProfileScreen({navigation}: Props) {
             hint={displayEmail}
           />
           <Row
-            icon={<EditIcon size={18} color={colors.textPrimary} />}
-            label="Full Name"
-            hint={displayName}
-            onPress={() => navigation.navigate('EditProfile')}
-          />
-          <Row
-            icon={<EditIcon size={18} color={colors.textPrimary} />}
+            icon={<PhoneIcon size={18} color={colors.textPrimary} />}
             label="Phone"
             hint={displayPhone}
-            onPress={() => navigation.navigate('EditProfile')}
           />
 
           <Row
@@ -389,10 +391,8 @@ type RowProps = {
 };
 
 function Row({icon, label, hint, onPress}: RowProps) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({pressed}) => [styles.row, pressed && styles.pressed]}>
+  const content = (
+    <>
       {icon ? <View style={styles.rowIcon}>{icon}</View> : <View style={styles.rowIcon} />}
       <View style={styles.rowLabelWrap}>
         <Text style={styles.rowLabel}>{label}</Text>
@@ -402,9 +402,21 @@ function Row({icon, label, hint, onPress}: RowProps) {
           </Text>
         ) : null}
       </View>
-      <ChevronRightIcon size={16} color={colors.textMuted} />
-    </Pressable>
+      {onPress ? <ChevronRightIcon size={16} color={colors.textMuted} /> : null}
+    </>
   );
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({pressed}) => [styles.row, pressed && styles.pressed]}>
+        {content}
+      </Pressable>
+    );
+  }
+
+  return <View style={styles.row}>{content}</View>;
 }
 
 function SwitchRow({

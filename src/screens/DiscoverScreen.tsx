@@ -55,49 +55,88 @@ export function DiscoverScreen({navigation}: Props) {
     return activeCategory.toLowerCase();
   }, [activeCategory]);
 
+  type DiscoverFeedData = {
+    trending: ContentItem[];
+    forYou?: ContentItem;
+    explore: ContentItem[];
+    actors: Student[];
+  };
+
   const fetchDiscover = useCallback(
-    (signal: AbortSignal) => {
+    async (signal: AbortSignal): Promise<DiscoverFeedData> => {
       if (!token) {
-        return null;
+        return {trending: [], explore: [], actors: []};
       }
-      return api.webseries
-        .list({
+      try {
+        const isSearchOrFilter = !!genre || !!q.trim();
+        const res = isSearchOrFilter
+          ? await api.discover.search({
+              token,
+              genre,
+              q: q.trim() || undefined,
+              signal,
+            })
+          : await api.discover.feed({token, signal});
+
+        const rawData = (res as any)?.data || res;
+        const sections = rawData?.sections || {};
+
+        const trendingItems = Array.isArray(sections.trending?.items)
+          ? sections.trending.items.map(webseriesToContent)
+          : [];
+
+        const forYouItems = Array.isArray(sections.forYou?.items)
+          ? sections.forYou.items.map(webseriesToContent)
+          : [];
+
+        const exploreItems = Array.isArray(sections.explore?.items)
+          ? sections.explore.items.map(webseriesToContent)
+          : [];
+
+        const actorsItems: Student[] = Array.isArray(sections.actors?.items)
+          ? sections.actors.items.map((a: any) => ({
+              _id: a.id || a._id,
+              fullName: a.fullName || a.name || '',
+              profileImage: a.profileImage || '',
+              course: a.course,
+              department: a.department,
+            }))
+          : [];
+
+        return {
+          trending: trendingItems,
+          forYou: forYouItems[0] || trendingItems[0],
+          explore: exploreItems,
+          actors: actorsItems,
+        };
+      } catch (err) {
+        // Fallback to webseries.list if discover API fails
+        const listRes = await api.webseries.list({
           token,
           status: 'PUBLISHED',
           genre,
           limit: 30,
           signal,
-        })
-        .then(res => res.data.map(webseriesToContent));
-    },
-    [token, genre],
-  );
-
-  const {data, loading, error, reload} = useApi(fetchDiscover, [token, genre]);
-
-  // Students (Actors) rail — /mobile-users/students. Fails silently: an
-  // error just collapses the section so the rest of the screen renders
-  // exactly as before.
-  const fetchStudents = useCallback(
-    (signal: AbortSignal) => {
-      if (!token) {
-        return null;
+        });
+        const items = listRes.data.map(webseriesToContent);
+        return {
+          trending: items.slice(0, 8),
+          forYou: items[0],
+          explore: items.slice(0, 10),
+          actors: [],
+        };
       }
-      return api.students
-        .list({token, limit: 20, signal})
-        .then(res => res.data)
-        .catch(() => [] as Student[]);
     },
-    [token],
+    [token, genre, q],
   );
-  const {data: studentsData} = useApi<Student[]>(fetchStudents, [token]);
-  const students: Student[] = studentsData ?? [];
 
-  const items: ContentItem[] = data ?? [];
-  const featured = items[0];
-  const trending = items.slice(0, 8);
-  const forYou = items.slice(0, 8);
-  const because = items.slice(0, 5);
+  const {data, loading, error, reload} = useApi(fetchDiscover, [token, genre, q]);
+
+  const trending = data?.trending ?? [];
+  const featured = data?.forYou;
+  const explore = data?.explore ?? [];
+  const students = data?.actors ?? [];
+  const hasAnyMedia = trending.length > 0 || !!featured || explore.length > 0;
 
   const openMovie = (id: string) =>
     navigation.navigate('MovieDetails', {id});
@@ -166,7 +205,7 @@ export function DiscoverScreen({navigation}: Props) {
           })}
         </View>
 
-        {error && !items.length ? (
+        {error && !hasAnyMedia ? (
           <View style={styles.errorBlock}>
             <Text style={styles.errorText}>{error}</Text>
             <Pressable onPress={reload} style={styles.retryBtn}>
@@ -175,11 +214,32 @@ export function DiscoverScreen({navigation}: Props) {
           </View>
         ) : null}
 
-        {loading && !items.length ? (
+        {loading && !hasAnyMedia ? (
           <View style={{paddingHorizontal: spacing.md}}>
             <Skeleton width="100%" height={240} borderRadius={radius.lg} style={{marginBottom: spacing.md}} />
             <MovieRowSkeleton titleWidth={120} />
             <MovieRowSkeleton titleWidth={150} />
+          </View>
+        ) : null}
+
+        {!loading && !error && !hasAnyMedia ? (
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyIconCircle}>
+              <SearchIcon size={30} color={colors.brand} />
+            </View>
+            <Text style={styles.emptyTitle}>
+              No titles found {activeCategory !== 'All Genres' ? `in "${activeCategory}"` : ''}
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              We couldn't find any webseries in this genre. Try switching back to "All Genres" or exploring another category.
+            </Text>
+            {activeCategory !== 'All Genres' ? (
+              <Pressable
+                onPress={() => setActiveCategory('All Genres')}
+                style={styles.resetBtn}>
+                <Text style={styles.resetBtnText}>View All Genres</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
 
@@ -280,37 +340,19 @@ export function DiscoverScreen({navigation}: Props) {
           </>
         ) : null}
 
-        {forYou.length ? (
-          <FlatList
-            horizontal
-            data={forYou}
-            keyExtractor={m => m.id}
-            contentContainerStyle={[styles.hlist, {marginTop: spacing.md}]}
-            ItemSeparatorComponent={() => (
-              <View style={{width: spacing.sm + 2}} />
-            )}
-            showsHorizontalScrollIndicator={false}
-            renderItem={({item}) => (
-              <MovieCard
-                movie={item}
-                width={112}
-                onPress={() => openMovie(item.id)}
-              />
-            )}
-          />
-        ) : null}
 
-        {because.length ? (
+
+        {explore.length ? (
           <>
-            <SectionHeader title="Recommended for you" compact />
+            <SectionHeader title="Explore Titles" compact />
             <View style={styles.becauseWrap}>
-              {because.map(m => (
+              {explore.map(m => (
                 <Pressable
                   key={m.id}
                   onPress={() => openMovie(m.id)}
                   style={styles.becauseRow}>
                   <Image
-                    source={{uri: m.backdrop}}
+                    source={{uri: m.backdrop || m.poster}}
                     style={styles.becauseImg}
                     resizeMode="cover"
                   />
@@ -350,9 +392,15 @@ function StudentAvatar({student}: {student: Student}) {
   const [imgFailed, setImgFailed] = useState(false);
   const showImage = !!student.profileImage && !imgFailed;
   const subtitle = student.course || student.department;
+  const actorId = student._id || (student as any).id;
+
   return (
     <Pressable
-      onPress={() => navigation.navigate('ActorProfile', {studentId: student._id})}
+      onPress={() => {
+        if (actorId) {
+          navigation.navigate('ActorProfile', {studentId: actorId});
+        }
+      }}
       style={({pressed}) => [styles.studentCard, pressed && {opacity: 0.75}]}>
       <View style={styles.studentAvatarRing}>
         {showImage ? (
@@ -481,6 +529,55 @@ const styles = StyleSheet.create({
   },
   categoryTextOn: {
     color: colors.brandText,
+  },
+  emptyWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+    borderRadius: radius.lg,
+    backgroundColor: colors.glassBg,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  emptyIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(157, 78, 221, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(157, 78, 221, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  emptyTitle: {
+    color: colors.textPrimary,
+    fontSize: 17,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  emptySubtitle: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+    maxWidth: 280,
+    marginBottom: spacing.lg,
+  },
+  resetBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: 999,
+    backgroundColor: colors.brand,
+  },
+  resetBtnText: {
+    color: colors.brandText,
+    fontSize: 13,
+    fontWeight: '700',
   },
   errorBlock: {
     marginHorizontal: spacing.md,

@@ -1,19 +1,16 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {colors, radius, spacing} from '../theme/colors';
 import {PrimaryButton} from '../components/PrimaryButton';
-import {PlayIcon} from '../components/icons';
+import {CompassIcon, CrownIcon, PlayIcon, StarIcon} from '../components/icons';
 import {Logo} from '../components/Logo';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
-// Decorative TMDB stills — user isn't authenticated yet on this screen, so
-// we can't call /webseries here. Bundling the URLs inline keeps the visual
-// language and avoids a spurious API hit / cold-start on first launch.
 const tmdb = (path: string) => `https://image.tmdb.org/t/p/w500${path}`;
 
 const COLUMN_POSTERS: string[][] = [
@@ -37,8 +34,39 @@ const COLUMN_POSTERS: string[][] = [
   ],
 ];
 
+const SLIDES = [
+  {
+    title: 'Unlimited Streaming',
+    body: 'Access thousands of 4K cinematic masterpieces, webseries, and drama at your fingertips.',
+    icon: 'play',
+  },
+  {
+    title: 'Watch Anywhere, Anytime',
+    body: 'Stream seamlessly on your phone, tablet, or TV with high-definition video and immersive audio.',
+    icon: 'compass',
+  },
+  {
+    title: 'Discover Talent & Originals',
+    body: 'Explore actor profiles, drama institutes, student showcases, and exclusive original series.',
+    icon: 'crown',
+  },
+];
+
 export function OnboardingScreen({navigation}: Props) {
-  const onContinue = () => navigation.replace('Auth');
+  const [slideIndex, setSlideIndex] = useState(0);
+  const currentSlide = SLIDES[slideIndex];
+
+  const handleContinue = () => {
+    if (slideIndex < SLIDES.length - 1) {
+      setSlideIndex(prev => prev + 1);
+    } else {
+      navigation.replace('Auth');
+    }
+  };
+
+  const handleSkip = () => {
+    navigation.replace('Auth');
+  };
 
   return (
     <View style={styles.root}>
@@ -74,21 +102,38 @@ export function OnboardingScreen({navigation}: Props) {
 
         <View style={styles.hero}>
           <View style={styles.playCircle}>
-            <PlayIcon size={22} color={colors.brandText} />
+            {currentSlide.icon === 'compass' ? (
+              <CompassIcon size={26} color={colors.brandText} />
+            ) : currentSlide.icon === 'crown' ? (
+              <CrownIcon size={26} color={colors.brandText} />
+            ) : (
+              <PlayIcon size={24} color={colors.brandText} />
+            )}
           </View>
-          <Text style={styles.heroTitle}>Unlimited Streaming</Text>
-          <Text style={styles.heroBody}>
-            Access thousands of 4K cinematic masterpieces and TV shows at your
-            fingertips.
-          </Text>
+          <Text style={styles.heroTitle}>{currentSlide.title}</Text>
+          <Text style={styles.heroBody}>{currentSlide.body}</Text>
+        </View>
+
+        {/* Slide indicators (Dots) */}
+        <View style={styles.pagination}>
+          {SLIDES.map((_, i) => (
+            <Pressable key={i} onPress={() => setSlideIndex(i)} hitSlop={6}>
+              <View
+                style={[
+                  styles.dot,
+                  i === slideIndex ? styles.dotActive : styles.dotInactive,
+                ]}
+              />
+            </Pressable>
+          ))}
         </View>
 
         <View style={styles.footer}>
-          <PrimaryButton label="Continue" onPress={onContinue} />
-          <Pressable
-            onPress={onContinue}
-            style={styles.skip}
-            hitSlop={8}>
+          <PrimaryButton
+            label={slideIndex === SLIDES.length - 1 ? 'Get Started' : 'Continue'}
+            onPress={handleContinue}
+          />
+          <Pressable onPress={handleSkip} style={styles.skip} hitSlop={8}>
             <Text style={styles.skipText}>SKIP INTRODUCTION</Text>
           </Pressable>
         </View>
@@ -155,6 +200,25 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'center',
     maxWidth: 320,
+  },
+  pagination: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: spacing.md,
+  },
+  dot: {
+    height: 8,
+    borderRadius: 4,
+  },
+  dotActive: {
+    width: 24,
+    backgroundColor: colors.brand,
+  },
+  dotInactive: {
+    width: 8,
+    backgroundColor: 'rgba(255,255,255,0.25)',
   },
   footer: {
     paddingBottom: spacing.md,

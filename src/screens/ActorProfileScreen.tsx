@@ -35,12 +35,15 @@ type ActorBundle = {
 
 export function ActorProfileScreen({navigation, route}: Props) {
   const {token} = useAuth();
-  const studentId = route.params.studentId;
+  const studentId = route.params?.studentId || (route.params as any)?.id || (route.params as any)?.redirectId;
 
   const fetchActorBundle = useCallback(
     async (signal: AbortSignal): Promise<ActorBundle> => {
       if (!token) {
         throw new Error('Not authenticated');
+      }
+      if (!studentId || studentId === 'undefined') {
+        throw new Error('Actor ID is missing or invalid');
       }
       const [detailRes, seriesRes] = await Promise.allSettled([
         api.students.get({token, id: studentId, signal}),
