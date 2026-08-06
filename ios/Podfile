@@ -45,6 +45,7 @@ target 'PlayDrama' do
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |target_config|
         target_config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+        target_config.build_settings['DEBUG_INFORMATION_FORMAT'] = 'dwarf-with-dsym'
       end
     end
   end
