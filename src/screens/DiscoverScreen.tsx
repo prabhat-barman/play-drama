@@ -6,7 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -43,7 +42,6 @@ type Props = CompositeScreenProps<
 >;
 
 export function DiscoverScreen({navigation}: Props) {
-  const [q, setQ] = useState('');
   const [activeCategory, setActiveCategory] = useState(searchCategories[0]);
   const {token} = useAuth();
 
@@ -126,10 +124,10 @@ export function DiscoverScreen({navigation}: Props) {
         };
       }
     },
-    [token, genre, q],
+    [token, genre],
   );
 
-  const {data, loading, error, reload} = useApi(fetchDiscover, [token, genre, q]);
+  const {data, loading, error, reload} = useApi(fetchDiscover, [token, genre]);
 
   const trending = data?.trending ?? [];
   const featured = data?.forYou;
@@ -146,22 +144,12 @@ export function DiscoverScreen({navigation}: Props) {
         <View style={styles.headerRow}>
           <Text style={styles.brand}>PLAY DRAMA</Text>
         </View>
-        <View style={styles.searchBar}>
+        <Pressable
+          onPress={() => navigation.navigate('Search', {focus: true})}
+          style={styles.searchBar}>
           <SearchIcon size={20} color={colors.textMuted} />
-          <TextInput
-            value={q}
-            onChangeText={setQ}
-            placeholder="Search movies, people..."
-            placeholderTextColor={colors.placeholder}
-            style={styles.input}
-            returnKeyType="search"
-            onSubmitEditing={() => {
-              if (q.trim()) {
-                navigation.navigate('Search');
-              }
-            }}
-          />
-        </View>
+          <Text style={styles.placeholderText}>Search movies, shows, cast...</Text>
+        </Pressable>
       </SafeAreaView>
 
       <ScrollView
@@ -479,11 +467,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.glassBorder,
   },
-  input: {
+  placeholderText: {
     flex: 1,
-    color: colors.textPrimary,
+    color: colors.placeholder,
     fontSize: 14,
-    paddingVertical: 0,
   },
   scroll: {paddingBottom: spacing.xxl + 40},
   recentWrap: {

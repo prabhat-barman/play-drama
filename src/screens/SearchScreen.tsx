@@ -39,11 +39,22 @@ const SEARCH_DEBOUNCE_MS = 350;
 // render (react/no-unstable-nested-components).
 const ChipSeparator = () => <View style={styles.chipGap} />;
 
-export function SearchScreen({navigation}: Props) {
+export function SearchScreen({navigation, route}: Props) {
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [genre, setGenre] = useState<string | null>(null);
   const {token} = useAuth();
+  const inputRef = React.useRef<TextInput>(null);
+
+  useEffect(() => {
+    const focusParam = (route.params as any)?.focus;
+    if (focusParam) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 150);
+      navigation.setParams({focus: undefined} as any);
+    }
+  }, [route.params, navigation]);
 
   // Debounce user typing so we don't hammer the backend on every keystroke.
   useEffect(() => {
@@ -87,6 +98,7 @@ export function SearchScreen({navigation}: Props) {
       <View style={styles.searchBar}>
         <SearchIcon size={20} color={colors.textMuted} />
         <TextInput
+          ref={inputRef}
           value={q}
           onChangeText={setQ}
           placeholder="Search movies, shows, cast..."
