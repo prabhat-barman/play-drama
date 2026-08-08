@@ -28,7 +28,7 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<RootStackParamList>
 >;
 
-const QUICK = ['Sci-Fi', 'Action', 'Thriller', 'Drama', 'Animation', 'Crime'];
+const QUICK = ['All Genres', 'Sci-Fi', 'Action', 'Thriller', 'Drama', 'Animation', 'Crime'];
 
 const {width: windowWidth} = Dimensions.get('window');
 const cardWidth = Math.floor((windowWidth - spacing.md * 2 - (spacing.sm + 2)) / 2);
@@ -123,10 +123,10 @@ export function SearchScreen({navigation, route}: Props) {
           showsHorizontalScrollIndicator={false}
           ItemSeparatorComponent={ChipSeparator}
           renderItem={({item}) => {
-            const selected = genre === item;
+            const selected = item === 'All Genres' ? genre === null : genre === item;
             return (
               <Pressable
-                onPress={() => setGenre(selected ? null : item)}
+                onPress={() => setGenre(item === 'All Genres' ? null : item)}
                 hitSlop={4}
                 style={({pressed}) => [
                   styles.chip,
