@@ -80,6 +80,10 @@ export function SearchScreen({navigation}: Props) {
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={styles.brand}>PLAY DRAMA</Text>
+      </View>
+
       <View style={styles.searchBar}>
         <SearchIcon size={20} color={colors.textMuted} />
         <TextInput
@@ -180,6 +184,20 @@ export function SearchScreen({navigation}: Props) {
 
 const styles = StyleSheet.create({
   root: {flex: 1, backgroundColor: colors.background},
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  brand: {
+    color: colors.brand,
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: -0.6,
+  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
