@@ -188,7 +188,111 @@ export function PlayerScreen({navigation, route}: Props) {
     }
   };
 
+  const currentRef = useRef(current);
+  currentRef.current = current;
+
+  const totalSecRef = useRef(totalSec);
+  totalSecRef.current = totalSec;
+
+  const initialSeekDone = useRef(false);
+
+  // Restore saved playback position on mount
+  useEffect(() => {
+    if (!token || !data?.firstEpisode) return;
+    const epId = data.firstEpisode._id || (data.firstEpisode as any).id;
+    if (!epId || initialSeekDone.current) return;
+
+    let isMounted = true;
+    api.watchHistory
+      .get({token, episodeId: epId})
+      .then(history => {
+        if (!isMounted || !history) return;
+        const savedProgress = history.progressSeconds;
+        const total = history.totalSeconds || totalSec;
+        if (
+          savedProgress > 3 &&
+          !history.completed &&
+          savedProgress < total - 5
+        ) {
+          setCurrent(savedProgress);
+          videoRef.current?.seek?.(savedProgress);
+        }
+        initialSeekDone.current = true;
+      })
+      .catch(() => {
+        initialSeekDone.current = true;
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token, data?.firstEpisode, totalSec]);
+
+  // Periodic heartbeat every 12 seconds during playback
+  useEffect(() => {
+    if (!token || !playing || isVideoLoading || !data?.firstEpisode) return;
+    const epId = data.firstEpisode._id || (data.firstEpisode as any).id;
+    if (!epId) return;
+
+    const interval = setInterval(() => {
+      const pos = currentRef.current;
+      const dur = totalSecRef.current;
+      if (pos > 0 && dur > 0) {
+        api.watchHistory
+          .updateProgress({
+            token,
+            episodeId: epId,
+            body: {
+              progressSeconds: Math.floor(pos),
+              totalSeconds: Math.floor(dur),
+            },
+          })
+          .catch(() => {});
+      }
+    }, 12000);
+
+    return () => clearInterval(interval);
+  }, [token, playing, isVideoLoading, data?.firstEpisode]);
+
+  // Heartbeat on screen exit / unmount
+  useEffect(() => {
+    return () => {
+      if (!token || !data?.firstEpisode) return;
+      const epId = data.firstEpisode._id || (data.firstEpisode as any).id;
+      const pos = currentRef.current;
+      const dur = totalSecRef.current;
+      if (epId && pos > 0 && dur > 0) {
+        api.watchHistory
+          .updateProgress({
+            token,
+            episodeId: epId,
+            body: {
+              progressSeconds: Math.floor(pos),
+              totalSeconds: Math.floor(dur),
+            },
+          })
+          .catch(() => {});
+      }
+    };
+  }, [token, data?.firstEpisode]);
+
   const handleVideoEnd = () => {
+    if (token && data?.firstEpisode) {
+      const epId = data.firstEpisode._id || (data.firstEpisode as any).id;
+      if (epId) {
+        api.watchHistory
+          .updateProgress({
+            token,
+            episodeId: epId,
+            body: {
+              progressSeconds: Math.floor(totalSec),
+              totalSeconds: Math.floor(totalSec),
+              completed: true,
+            },
+          })
+          .catch(() => {});
+      }
+    }
     if (hasNextEp) {
       handleNextEpisode();
     } else {

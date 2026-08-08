@@ -63,19 +63,34 @@ export function MovieDetailsScreen({navigation, route}: Props) {
       }
       const detail = await api.webseries.get({token, id, signal});
       const movie = webseriesToContent(detail);
-      const seasons: Season[] = Array.isArray(detail.seasons) && detail.seasons.length > 0
+      let seasons: Season[] = Array.isArray(detail.seasons) && detail.seasons.length > 0
         ? (detail.seasons as Season[])
-        : [
-            {
-              _id: 'season_1',
-              seasonNumber: 1,
-              title: 'Season 1',
-              description: null,
-              thumbnail: null,
-              releaseDate: null,
-              totalEpisodes: detail.totalEpisodes ?? 0,
-            },
-          ];
+        : [];
+
+      if (seasons.length === 0) {
+        try {
+          const fetchedSeasons = await api.seasons.list({token, webSeriesId: id, signal});
+          if (Array.isArray(fetchedSeasons) && fetchedSeasons.length > 0) {
+            seasons = fetchedSeasons;
+          }
+        } catch {
+          // Ignore fallback error
+        }
+      }
+
+      if (seasons.length === 0) {
+        seasons = [
+          {
+            _id: 'season_1',
+            seasonNumber: 1,
+            title: 'Season 1',
+            description: null,
+            thumbnail: null,
+            releaseDate: null,
+            totalEpisodes: detail.totalEpisodes ?? 0,
+          },
+        ];
+      }
 
       const [relatedRes] = await Promise.allSettled([
         api.webseries.list({

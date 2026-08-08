@@ -17,6 +17,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import type {CompositeScreenProps} from '@react-navigation/native';
+import {useFocusEffect} from '@react-navigation/native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {audioStories, podcasts} from '../data/placeholders';
@@ -35,7 +36,7 @@ import {
 import {MovieRow} from '../components/MovieRow';
 import {SectionHeader} from '../components/SectionHeader';
 import {MovieRowSkeleton} from '../components/Skeleton';
-import {api} from '../lib/api';
+import {api, type ContinueWatchingItem} from '../lib/api';
 import {webseriesToContent} from '../lib/adapters';
 import {useApi} from '../lib/useApi';
 import {useAuth} from '../context/AuthContext';
@@ -82,6 +83,7 @@ type CategoryItem = {
 
 type HomePayload = {
   banner: ContentItem[];
+  continueWatching: ContinueWatchingItem[];
   trending: ContentItem[];
   newReleases: ContentItem[];
   topRated: ContentItem[];
@@ -106,6 +108,7 @@ export function HomeScreen({navigation}: Props) {
       if (!token) {
         return {
           banner: [],
+          continueWatching: [],
           trending: [],
           newReleases: [],
           topRated: [],
@@ -123,6 +126,7 @@ export function HomeScreen({navigation}: Props) {
       // Fetch /home API feeds in parallel along with genre fallbacks
       const [
         homeFeedRes,
+        continueWatchingRes,
         trendingRes,
         newReleasesRes,
         popularDramasRes,
@@ -131,6 +135,7 @@ export function HomeScreen({navigation}: Props) {
         dramaRes,
       ] = await Promise.allSettled([
         api.home.get({token, signal}),
+        api.home.continueWatching({token, limit: 10, signal}),
         api.home.trending({token, signal}),
         api.home.newReleases({token, signal}),
         api.home.popularDramas({token, signal}),
@@ -161,6 +166,13 @@ export function HomeScreen({navigation}: Props) {
       const unwrapList = (r: PromiseSettledResult<any>): ContentItem[] =>
         r.status === 'fulfilled' && r.value?.data
           ? (Array.isArray(r.value.data) ? r.value.data : r.value.data.data ?? []).map(webseriesToContent)
+          : [];
+
+      const continueWatchingItems: ContinueWatchingItem[] =
+        continueWatchingRes.status === 'fulfilled' && Array.isArray(continueWatchingRes.value)
+          ? continueWatchingRes.value
+          : continueWatchingRes.status === 'fulfilled' && Array.isArray((continueWatchingRes.value as any)?.data)
+          ? (continueWatchingRes.value as any).data
           : [];
 
       const trendingFromApi = unwrapSeries(trendingRes);
@@ -228,6 +240,7 @@ export function HomeScreen({navigation}: Props) {
 
       return {
         banner: bannerItems.length > 0 ? bannerItems : trendingFinal.slice(0, 5),
+        continueWatching: continueWatchingItems,
         trending: trendingFinal,
         newReleases: newReleasesFinal,
         topRated: topRatedHome,
@@ -247,6 +260,14 @@ export function HomeScreen({navigation}: Props) {
 
   const {data, loading, error, reload} = useApi(fetchHome, [token]);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (token) {
+        reload();
+      }
+    }, [token, reload]),
+  );
+
   const bannerItems = useMemo(
     () => (data?.banner?.length ? data.banner : data?.trending.slice(0, 5) ?? []),
     [data],
@@ -265,7 +286,8 @@ export function HomeScreen({navigation}: Props) {
 
   const openMovie = (id: string) =>
     navigation.navigate('MovieDetails', {id});
-  const playMovie = (id: string) => navigation.navigate('Player', {id});
+  const playMovie = (id: string, episodeId?: string) =>
+    navigation.navigate('Player', {id, episodeId});
 
   return (
     <View style={styles.root}>
@@ -284,6 +306,15 @@ export function HomeScreen({navigation}: Props) {
           onOpenNotifications={() => navigation.navigate('Notifications')}
           unreadCount={unreadCount}
         />
+
+        {data?.continueWatching?.length ? (
+          <ContinueWatchingRail
+            items={data.continueWatching}
+            onPressItem={item =>
+              playMovie(item.id || item.redirectId || '', item.episodeId)
+            }
+          />
+        ) : null}
 
         {loading && !data ? (
           <>
@@ -511,6 +542,76 @@ export function HomeScreen({navigation}: Props) {
           </View>
         ) : null}
       </ScrollView>
+    </View>
+  );
+}
+
+const HorizontalSeparator12 = () => <View style={styles.sep12} />;
+
+function ContinueWatchingRail({
+  items,
+  onPressItem,
+}: {
+  items: ContinueWatchingItem[];
+  onPressItem: (item: ContinueWatchingItem) => void;
+}) {
+  if (!items || items.length === 0) return null;
+
+  return (
+    <View style={styles.sectionContainer}>
+      <SectionHeader title="Continue Watching" />
+      <FlatList
+        horizontal
+        data={items}
+        keyExtractor={(item, idx) => item.id || item.episodeId || `cw-${idx}`}
+        contentContainerStyle={styles.hlist}
+        ItemSeparatorComponent={HorizontalSeparator12}
+        showsHorizontalScrollIndicator={false}
+        renderItem={({item}) => {
+          const pct = Math.min(100, Math.max(0, item.percentage ?? 0));
+          return (
+            <Pressable
+              onPress={() => onPressItem(item)}
+              style={({pressed}) => [
+                styles.cwCard,
+                pressed && {opacity: 0.88, transform: [{scale: 0.98}]},
+              ]}>
+              <View style={styles.cwThumbWrap}>
+                {item.thumbnail ? (
+                  <Image
+                    source={{uri: item.thumbnail}}
+                    style={styles.cwThumb}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.cwThumb, styles.cwThumbPlaceholder]}>
+                    <PlayIcon size={24} color={colors.textMuted} />
+                  </View>
+                )}
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.85)']}
+                  style={styles.cwGradient}
+                />
+                <View style={styles.cwPlayBadge}>
+                  <PlayIcon size={16} color={colors.background} />
+                </View>
+                <View style={styles.cwProgressBar}>
+                  <View style={[styles.cwProgressFill, {width: `${pct}%`}]} />
+                </View>
+              </View>
+              <View style={styles.cwInfo}>
+                <Text style={styles.cwTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.cwSubtitle} numberOfLines={1}>
+                  {item.seasonNumber ? `S${item.seasonNumber} · ` : ''}
+                  {pct > 0 ? `${pct}% watched` : 'Resume'}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        }}
+      />
     </View>
   );
 }
@@ -1155,4 +1256,73 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  cwCard: {
+    width: 200,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.glassBorder,
+    overflow: 'hidden',
+  },
+  cwThumbWrap: {
+    width: 200,
+    height: 112,
+    position: 'relative',
+    backgroundColor: '#1a1a1a',
+  },
+  cwThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  cwThumbPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  cwGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 48,
+  },
+  cwPlayBadge: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '50%',
+    marginTop: -18,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(233, 40, 68, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+  },
+  cwProgressBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  cwProgressFill: {
+    height: '100%',
+    backgroundColor: colors.brand,
+  },
+  cwInfo: {
+    padding: spacing.sm,
+  },
+  cwTitle: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  cwSubtitle: {
+    color: colors.textMuted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  sep12: {width: 12},
 });
