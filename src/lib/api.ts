@@ -156,6 +156,16 @@ export type CastMember = {
   profileImage?: string;
 };
 
+export type Season = {
+  _id: string;
+  seasonNumber: number;
+  title: string | null;
+  description: string | null;
+  thumbnail: string | null;
+  releaseDate: string | null;
+  totalEpisodes: number;
+};
+
 export type Webseries = {
   _id: string;
   title: string;
@@ -163,6 +173,8 @@ export type Webseries = {
   thumbnail: string;
   coverImage?: string;
   language?: string;
+  totalSeasons?: number;
+  seasons?: Season[];
   ageRating?: string;
   genres?: string[];
   tags?: string[];
@@ -1339,6 +1351,7 @@ export const api = {
     list: (input: {
       token: string;
       webSeriesId: string;
+      seasonId?: string;
       page?: number;
       limit?: number;
       signal?: AbortSignal;
@@ -1349,8 +1362,9 @@ export const api = {
         signal: input.signal,
         query: {
           webSeriesId: input.webSeriesId,
-          page: input.page,
-          limit: input.limit,
+          seasonId: input.seasonId,
+          page: typeof input.page === 'number' ? Math.max(1, input.page) : undefined,
+          limit: typeof input.limit === 'number' ? Math.min(100, Math.max(1, input.limit)) : undefined,
         },
       }),
 
@@ -1359,6 +1373,22 @@ export const api = {
         method: 'GET',
         token: input.token,
         signal: input.signal,
+      }),
+  },
+
+  seasons: {
+    list: (input: {
+      token: string;
+      webSeriesId: string;
+      signal?: AbortSignal;
+    }) =>
+      request<Season[]>('/mobile-users/seasons', {
+        method: 'GET',
+        token: input.token,
+        signal: input.signal,
+        query: {
+          webSeriesId: input.webSeriesId,
+        },
       }),
   },
 

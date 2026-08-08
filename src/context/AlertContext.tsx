@@ -12,7 +12,6 @@ import {
   HelpIcon,
   LogOutIcon,
   ShieldIcon,
-  StarIcon,
 } from '../components/icons';
 
 export type AlertType = 'info' | 'success' | 'error' | 'confirm' | 'logout';

@@ -128,12 +128,15 @@ function handleNotificationTap(payload: NotificationTapPayload) {
   if (!navRef.isReady()) return;
 
   // Prefer explicit routing hints over URL parsing.
-  if (payload.webSeriesId) {
-    navRef.navigate('MovieDetails', {id: payload.webSeriesId});
+  if (payload.episodeId) {
+    navRef.navigate('Player', {
+      id: payload.webSeriesId || '',
+      episodeId: payload.episodeId,
+    });
     return;
   }
-  if (payload.episodeId) {
-    navRef.navigate('Player', {id: payload.episodeId});
+  if (payload.webSeriesId) {
+    navRef.navigate('MovieDetails', {id: payload.webSeriesId});
     return;
   }
   if (payload.deepLink) {

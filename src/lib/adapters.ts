@@ -50,9 +50,9 @@ export function webseriesToContent(w: any): ContentItem {
     year: parseYear(w.releaseDate),
     totalEpisodes: w.totalEpisodes,
     seasons:
-      typeof w.totalEpisodes === 'number' && w.totalEpisodes > 0
-        ? 1
-        : undefined,
+      typeof w.totalSeasons === 'number'
+        ? w.totalSeasons
+        : (typeof w.totalEpisodes === 'number' && w.totalEpisodes > 0 ? 1 : undefined),
     genres: (w.genres ?? []).map(capitalize),
     poster: w.thumbnail || w.image || w.coverImage || '',
     backdrop: w.image || w.coverImage || w.thumbnail || '',

@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {
-  ActivityIndicator,
+  Dimensions,
   FlatList,
   Pressable,
   StyleSheet,
@@ -29,6 +29,9 @@ type Props = CompositeScreenProps<
 >;
 
 const QUICK = ['Sci-Fi', 'Action', 'Thriller', 'Drama', 'Animation', 'Crime'];
+
+const {width: windowWidth} = Dimensions.get('window');
+const cardWidth = Math.floor((windowWidth - spacing.md * 2 - (spacing.sm + 2)) / 2);
 
 const SEARCH_DEBOUNCE_MS = 350;
 
@@ -135,7 +138,7 @@ export function SearchScreen({navigation}: Props) {
           <View style={styles.gridItem}>
             <MovieCard
               movie={item}
-              width={160}
+              width={cardWidth}
               showTitle
               onPress={() => navigation.navigate('MovieDetails', {id: item.id})}
             />
@@ -147,11 +150,11 @@ export function SearchScreen({navigation}: Props) {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           loading ? (
-            <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center', marginTop: spacing.md}}>
-              <MovieCardSkeleton width={160} />
-              <MovieCardSkeleton width={160} />
-              <MovieCardSkeleton width={160} />
-              <MovieCardSkeleton width={160} />
+            <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm + 2, justifyContent: 'center', marginTop: spacing.md}}>
+              <MovieCardSkeleton width={cardWidth} />
+              <MovieCardSkeleton width={cardWidth} />
+              <MovieCardSkeleton width={cardWidth} />
+              <MovieCardSkeleton width={cardWidth} />
             </View>
           ) : error ? (
             <View style={styles.state}>

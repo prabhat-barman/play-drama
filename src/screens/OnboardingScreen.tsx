@@ -5,7 +5,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {colors, radius, spacing} from '../theme/colors';
 import {PrimaryButton} from '../components/PrimaryButton';
-import {CompassIcon, CrownIcon, PlayIcon, StarIcon} from '../components/icons';
+import {CompassIcon, CrownIcon, PlayIcon} from '../components/icons';
 import {Logo} from '../components/Logo';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 

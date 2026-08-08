@@ -5,6 +5,7 @@ type ApiState<T> = {
   data: T | null;
   loading: boolean;
   error: string | null;
+  errorStatus: number | null;
   reload: () => void;
 };
 
@@ -21,6 +22,7 @@ export function useApi<T>(
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [tick, setTick] = useState(0);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -44,6 +46,7 @@ export function useApi<T>(
 
     setLoading(true);
     setError(null);
+    setErrorStatus(null);
 
     p.then(result => {
       if (controller.signal.aborted) {
@@ -57,6 +60,7 @@ export function useApi<T>(
       }
       const message = extractErrorMessage(err);
       setError(message);
+      setErrorStatus(err instanceof ApiError ? err.status : null);
       setLoading(false);
     });
 
@@ -66,7 +70,7 @@ export function useApi<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, tick]);
 
-  return {data, loading, error, reload};
+  return {data, loading, error, errorStatus, reload};
 }
 
 export function extractErrorMessage(err: unknown): string {

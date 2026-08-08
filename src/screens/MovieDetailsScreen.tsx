@@ -1,6 +1,5 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -15,7 +14,6 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {colors, radius, spacing} from '../theme/colors';
 import {
   BookmarkIcon,
-  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   DownloadIcon,
@@ -29,7 +27,7 @@ import {
 import {SegmentedTabs} from '../components/SegmentedTabs';
 import {MovieCard} from '../components/MovieCard';
 import {Skeleton} from '../components/Skeleton';
-import {api, type Episode as ApiEpisode} from '../lib/api';
+import {api, type Episode as ApiEpisode, type CastMember, type Season} from '../lib/api';
 import {
   episodeRuntimeMinutes,
   webseriesToContent,
@@ -47,6 +45,8 @@ type Bundle = {
   movie: ContentItem;
   episodes: ApiEpisode[];
   related: ContentItem[];
+  rawCast?: CastMember[];
+  seasons?: Season[];
 };
 
 export function MovieDetailsScreen({navigation, route}: Props) {
@@ -54,7 +54,7 @@ export function MovieDetailsScreen({navigation, route}: Props) {
   const id = route.params.id;
   const [saved, setSaved] = useState(false);
   const [liked, setLiked] = useState(false);
-  const [selectedSeason, setSelectedSeason] = useState(1);
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
 
 
   const fetchBundle = useCallback(
@@ -64,13 +64,28 @@ export function MovieDetailsScreen({navigation, route}: Props) {
       }
       const detail = await api.webseries.get({token, id, signal});
       const movie = webseriesToContent(detail);
+      const seasons = Array.isArray(detail.seasons) ? (detail.seasons as Season[]) : undefined;
+
+      // Determine active season parameter
+      let activeSeasonId: string | undefined;
+      if (selectedSeasonId) {
+        activeSeasonId = selectedSeasonId;
+      } else if (seasons && seasons.length > 0) {
+        activeSeasonId = seasons[0]._id;
+      }
+
+      const activeSeasonIdParam = activeSeasonId && activeSeasonId !== 'season_1'
+        ? activeSeasonId
+        : undefined;
+
       // Related + episodes in parallel — episodes only needed if the
       // series actually has any, but we fire eagerly and let the UI decide.
       const [episodesRes, relatedRes] = await Promise.allSettled([
         api.episodes.list({
           token,
           webSeriesId: id,
-          limit: 30,
+          seasonId: activeSeasonIdParam,
+          limit: 100,
           signal,
         }),
         api.webseries.list({
@@ -82,7 +97,9 @@ export function MovieDetailsScreen({navigation, route}: Props) {
         }),
       ]);
       const episodes =
-        episodesRes.status === 'fulfilled' ? episodesRes.value.data : [];
+        episodesRes.status === 'fulfilled'
+          ? episodesRes.value.data.slice().sort((a, b) => a.episodeNumber - b.episodeNumber)
+          : [];
       const related =
         relatedRes.status === 'fulfilled'
           ? relatedRes.value.data
@@ -90,16 +107,43 @@ export function MovieDetailsScreen({navigation, route}: Props) {
               .filter(r => r.id !== movie.id)
               .slice(0, 6)
           : [];
-      return {movie, episodes, related};
+      const rawCast =
+        Array.isArray(detail.cast) && typeof detail.cast[0] !== 'string'
+          ? (detail.cast as CastMember[])
+          : undefined;
+      return {movie, episodes, related, rawCast, seasons};
     },
-    [token, id],
+    [token, id, selectedSeasonId],
   );
 
-  const {data, loading, error, reload} = useApi(fetchBundle, [token, id]);
+  const {data, loading, error, errorStatus, reload} = useApi(fetchBundle, [
+    token,
+    id,
+    selectedSeasonId,
+  ]);
 
   const movie = data?.movie;
   const episodes = data?.episodes ?? [];
   const related = data?.related ?? [];
+  const rawCast = data?.rawCast ?? [];
+
+  // Parse seasons from data, fallback to single default season if undefined/empty
+  const seasons = data?.seasons && data.seasons.length > 0
+    ? data.seasons
+    : [
+        {
+          _id: 'season_1',
+          seasonNumber: 1,
+          title: 'Season 1',
+          description: null,
+          thumbnail: null,
+          releaseDate: null,
+          totalEpisodes: episodes.length,
+        }
+      ];
+
+  const activeSeasonId = selectedSeasonId || seasons[0]?._id || 'season_1';
+  const activeSeasonNumber = seasons.find(s => s._id === activeSeasonId)?.seasonNumber || 1;
 
   const isSeries =
     (movie?.totalEpisodes ?? 0) > 0 || episodes.length > 0;
@@ -144,14 +188,14 @@ export function MovieDetailsScreen({navigation, route}: Props) {
     return (
       <View style={styles.root}>
         <Skeleton width="100%" height={340} borderRadius={0} />
-        <View style={{paddingHorizontal: spacing.md, marginTop: -60, gap: 12}}>
+        <View style={{paddingHorizontal: spacing.md, marginTop: -80, gap: 12}}>
           <Skeleton width="80%" height={32} borderRadius={6} />
           <Skeleton width="50%" height={16} borderRadius={4} />
           <Skeleton width="100%" height={48} borderRadius={radius.md} style={{marginTop: 6}} />
           <View style={{flexDirection: 'row', gap: 10}}>
-            <Skeleton width="31%" height={42} borderRadius={radius.md} />
-            <Skeleton width="31%" height={42} borderRadius={radius.md} />
-            <Skeleton width="31%" height={42} borderRadius={radius.md} />
+            <Skeleton width="100%" height={42} borderRadius={radius.md} style={{flex: 1}} />
+            <Skeleton width="100%" height={42} borderRadius={radius.md} style={{flex: 1}} />
+            <Skeleton width="100%" height={42} borderRadius={radius.md} style={{flex: 1}} />
           </View>
           <Skeleton width="100%" height={14} borderRadius={4} style={{marginTop: 10}} />
           <Skeleton width="90%" height={14} borderRadius={4} />
@@ -162,12 +206,17 @@ export function MovieDetailsScreen({navigation, route}: Props) {
   }
 
   if (error && !movie) {
+    const isUnpublished = errorStatus === 403;
     return (
       <View style={styles.emptyRoot}>
-        <Text style={styles.emptyText}>{error}</Text>
-        <Pressable onPress={reload} style={styles.retryBtn}>
-          <Text style={styles.retryText}>Retry</Text>
-        </Pressable>
+        <Text style={[styles.emptyText, {textAlign: 'center', paddingHorizontal: 24}]}>
+          {isUnpublished ? 'Access denied: Content not yet published' : error}
+        </Text>
+        {!isUnpublished ? (
+          <Pressable onPress={reload} style={styles.retryBtn}>
+            <Text style={styles.retryText}>Retry</Text>
+          </Pressable>
+        ) : null}
         <Pressable onPress={() => navigation.goBack()} style={styles.backLink}>
           <Text style={styles.backText}>Go back</Text>
         </Pressable>
@@ -365,38 +414,33 @@ export function MovieDetailsScreen({navigation, route}: Props) {
           <View style={styles.section}>
             {/* Season Selector */}
             <View style={styles.seasonRow}>
-              <View style={{flexDirection: 'row', gap: 8, alignItems: 'center'}}>
-                <Pressable
-                  onPress={() => setSelectedSeason(1)}
-                  style={[
-                    styles.seasonPill,
-                    selectedSeason === 1 && styles.seasonPillActive,
-                  ]}>
-                  <Text
-                    style={[
-                      styles.seasonPillText,
-                      selectedSeason === 1 && styles.seasonPillTextActive,
-                    ]}>
-                    Season 1
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setSelectedSeason(2)}
-                  style={[
-                    styles.seasonPill,
-                    selectedSeason === 2 && styles.seasonPillActive,
-                  ]}>
-                  <Text
-                    style={[
-                      styles.seasonPillText,
-                      selectedSeason === 2 && styles.seasonPillTextActive,
-                    ]}>
-                    Season 2
-                  </Text>
-                </Pressable>
-              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection: 'row', gap: 8, alignItems: 'center'}}>
+                {seasons.map(s => {
+                  const selected = s._id === activeSeasonId;
+                  return (
+                    <Pressable
+                      key={s._id}
+                      onPress={() => setSelectedSeasonId(s._id)}
+                      style={[
+                        styles.seasonPill,
+                        selected && styles.seasonPillActive,
+                      ]}>
+                      <Text
+                        style={[
+                          styles.seasonPillText,
+                          selected && styles.seasonPillTextActive,
+                        ]}>
+                        {s.title || `Season ${s.seasonNumber}`}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
               <Text style={styles.seasonCount}>
-                {episodes.length} Episodes
+                {(() => {
+                  const count = episodes.length;
+                  return `${count} Episode${count !== 1 ? 's' : ''}`;
+                })()}
               </Text>
             </View>
 
@@ -422,7 +466,7 @@ export function MovieDetailsScreen({navigation, route}: Props) {
                   </View>
                   <View style={styles.epBody}>
                     <Text style={styles.epTitle}>
-                      S{selectedSeason} E{e.episodeNumber}. {e.title}
+                      S{activeSeasonNumber} E{e.episodeNumber}. {e.title}
                     </Text>
                     {e.description ? (
                       <Text style={styles.epSynopsis} numberOfLines={2}>
@@ -437,7 +481,7 @@ export function MovieDetailsScreen({navigation, route}: Props) {
               ))
             ) : (
               <Text style={styles.emptyBlockText}>
-                No episodes released yet.
+                No episodes released yet for this season.
               </Text>
             )}
           </View>
@@ -467,27 +511,31 @@ export function MovieDetailsScreen({navigation, route}: Props) {
 
         {activeTab === 'cast' ? (
           <View style={styles.section}>
-            {cast.length ? (
-              cast.map((c, idx) => (
+            {rawCast.length ? (
+              rawCast.map((c) => (
                 <Pressable
-                  key={idx}
+                  key={c._id}
                   onPress={() =>
-                    navigation.navigate('ActorProfile', {studentId: `student_${idx + 1}`})
+                    navigation.navigate('ActorProfile', {studentId: c._id})
                   }
                   style={({pressed}) => [styles.castRow, pressed && styles.pressed]}>
-                  <View style={styles.castAvatar}>
-                    <Text style={styles.castInitials}>
-                      {c
-                        .split(' ')
-                        .filter(Boolean)
-                        .map(s => s[0])
-                        .slice(0, 2)
-                        .join('')
-                        .toUpperCase() || '?'}
-                    </Text>
-                  </View>
+                  {c.profileImage ? (
+                    <Image source={{uri: c.profileImage}} style={styles.castAvatar} />
+                  ) : (
+                    <View style={styles.castAvatar}>
+                      <Text style={styles.castInitials}>
+                        {c.fullName
+                          .split(' ')
+                          .filter(Boolean)
+                          .map(s => s[0])
+                          .slice(0, 2)
+                          .join('')
+                          .toUpperCase() || '?'}
+                      </Text>
+                    </View>
+                  )}
                   <View style={{flex: 1}}>
-                    <Text style={styles.castName}>{c}</Text>
+                    <Text style={styles.castName}>{c.fullName}</Text>
                     <Text style={styles.castRole}>Actor · Tap to view profile</Text>
                   </View>
                   <ChevronRightIcon size={16} color={colors.textMuted} />
