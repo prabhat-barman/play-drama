@@ -2,7 +2,7 @@ import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {AuthNavigator} from './AuthNavigator';
 import {MainTabs} from './MainTabs';
-import {StudentTabs} from './StudentTabs';
+
 import {MovieDetailsScreen} from '../screens/MovieDetailsScreen';
 import {SplashScreen} from '../screens/SplashScreen';
 import {OnboardingScreen} from '../screens/OnboardingScreen';
@@ -32,13 +32,8 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
-  const {status, user} = useAuth();
-  // Students get a stripped-down shell (Profile-only tab + change
-  // password); every other allowed role (MOBILE_USER) sees the full app.
-  // We branch on the tab-navigator level rather than the individual
-  // screens so React Navigation resets cleanly when the role flips
-  // (e.g. logout → login as a different user).
-  const isStudent = user?.role === 'STUDENT';
+  const {status} = useAuth();
+
 
   if (status === 'loading') {
     return (
@@ -64,7 +59,7 @@ export function RootNavigator() {
       }}>
       {status === 'authenticated' ? (
         <>
-          <Stack.Screen name="Main" component={isStudent ? StudentTabs : MainTabs} />
+          <Stack.Screen name="Main" component={MainTabs} />
           <Stack.Screen
             name="MovieDetails"
             component={MovieDetailsScreen}

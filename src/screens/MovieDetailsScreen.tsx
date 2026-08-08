@@ -200,19 +200,36 @@ export function MovieDetailsScreen({navigation, route}: Props) {
   if (loading && !movie) {
     return (
       <View style={styles.root}>
-        <Skeleton width="100%" height={340} borderRadius={0} />
-        <View style={{paddingHorizontal: spacing.md, marginTop: -80, gap: 12}}>
-          <Skeleton width="80%" height={32} borderRadius={6} />
-          <Skeleton width="50%" height={16} borderRadius={4} />
-          <Skeleton width="100%" height={48} borderRadius={radius.md} style={{marginTop: 6}} />
+        {/* Hero image placeholder */}
+        <Skeleton width="100%" height={320} borderRadius={0} />
+        {/* Back button placeholder */}
+        <SafeAreaView
+          edges={['top']}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none">
+          <View style={{paddingHorizontal: spacing.md, paddingTop: spacing.xs}}>
+            <Skeleton width={40} height={40} borderRadius={20} />
+          </View>
+        </SafeAreaView>
+        {/* Body content skeleton */}
+        <View style={{paddingHorizontal: spacing.md, marginTop: 20, gap: 12}}>
+          <Skeleton width="75%" height={34} borderRadius={6} />
+          <Skeleton width="45%" height={14} borderRadius={4} />
+          <Skeleton width="100%" height={48} borderRadius={radius.md} style={{marginTop: 4}} />
           <View style={{flexDirection: 'row', gap: 10}}>
             <Skeleton width="100%" height={42} borderRadius={radius.md} style={{flex: 1}} />
             <Skeleton width="100%" height={42} borderRadius={radius.md} style={{flex: 1}} />
             <Skeleton width="100%" height={42} borderRadius={radius.md} style={{flex: 1}} />
           </View>
-          <Skeleton width="100%" height={14} borderRadius={4} style={{marginTop: 10}} />
-          <Skeleton width="90%" height={14} borderRadius={4} />
-          <Skeleton width="70%" height={14} borderRadius={4} />
+          <View style={{gap: 8, marginTop: 8}}>
+            <Skeleton width="100%" height={14} borderRadius={4} />
+            <Skeleton width="92%" height={14} borderRadius={4} />
+            <Skeleton width="70%" height={14} borderRadius={4} />
+          </View>
+          <View style={{gap: 6, marginTop: 4}}>
+            <Skeleton width="55%" height={12} borderRadius={4} />
+            <Skeleton width="45%" height={12} borderRadius={4} />
+          </View>
         </View>
       </View>
     );
