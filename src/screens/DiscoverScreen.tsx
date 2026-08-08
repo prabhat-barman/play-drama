@@ -187,21 +187,37 @@ export function DiscoverScreen({navigation}: Props) {
           </>
         ) : null}
 
-        <View style={styles.categoriesRow}>
-          {searchCategories.map(c => {
-            const on = c === activeCategory;
-            return (
-              <Pressable
-                key={c}
-                onPress={() => setActiveCategory(c)}
-                style={[styles.category, on && styles.categoryOn]}>
-                <Text
-                  style={[styles.categoryText, on && styles.categoryTextOn]}>
-                  {c}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <View style={styles.chipsWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsRow}>
+            {searchCategories.map((c, idx) => {
+              const selected = c === activeCategory;
+              return (
+                <React.Fragment key={c}>
+                  {idx > 0 && <View style={styles.chipGap} />}
+                  <Pressable
+                    onPress={() => setActiveCategory(c)}
+                    hitSlop={4}
+                    style={({pressed}) => [
+                      styles.chip,
+                      selected && styles.chipSelected,
+                      pressed && !selected && styles.chipPressed,
+                    ]}>
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selected && styles.chipTextSelected,
+                      ]}
+                      numberOfLines={1}>
+                      {c}
+                    </Text>
+                  </Pressable>
+                </React.Fragment>
+              );
+            })}
+          </ScrollView>
         </View>
 
         {loading ? (
@@ -502,34 +518,44 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  categoriesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.lg,
+  chipsWrap: {
+    height: 44,
+    justifyContent: 'center',
+    marginBottom: spacing.md,
   },
-  category: {
+  chipsRow: {
     paddingHorizontal: spacing.md,
-    height: 32,
+    alignItems: 'center',
+  },
+  chipGap: {width: 8},
+  chip: {
+    height: 34,
+    minWidth: 68,
+    paddingHorizontal: spacing.md,
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    backgroundColor: colors.glassBg,
   },
-  categoryOn: {
+  chipPressed: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  chipSelected: {
     backgroundColor: colors.brand,
     borderColor: colors.brand,
   },
-  categoryText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
+  chipText: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
-  categoryTextOn: {
+  chipTextSelected: {
     color: colors.brandText,
+    fontWeight: '800',
   },
   emptyWrap: {
     alignItems: 'center',
