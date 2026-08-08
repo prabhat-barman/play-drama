@@ -23,7 +23,7 @@ import {colors} from '../theme/colors';
 export type MainTabParamList = {
   Home: undefined;
   Discover: undefined;
-  Search: undefined;
+  Search: {focus?: boolean} | undefined;
   Watchlist: undefined;
   Profile: undefined;
 };

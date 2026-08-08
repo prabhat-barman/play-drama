@@ -47,19 +47,22 @@ export function EditProfileScreen({navigation}: Props) {
     }
     setLoading(true);
     try {
-      if (user?.role === 'STUDENT' && user.id) {
-        const studentDetail = await api.students.get({token, id: user.id, signal});
+      if (user?.role === 'STUDENT') {
+        // Use /auth/me — returns full student profile (course, department,
+        // batch, semester, bio, skills) without needing a separate student ID.
+        const me = await api.auth.me({token});
         if (signal?.aborted) return;
-        if (studentDetail) {
-          setFullName(studentDetail.fullName || user.name || '');
-          setPhone(studentDetail.phone || user.phone || '');
-          setEmail(studentDetail.email || user.email || '');
-          setCourse(studentDetail.course || '');
-          setDepartment(studentDetail.department || '');
-          setBatch(studentDetail.batch || '');
-          setSemester(studentDetail.semester || '');
-          setBio(studentDetail.bio || '');
-          setSkills(studentDetail.skills?.join(', ') || '');
+        if (me && 'role' in me && me.role === 'STUDENT' && 'profile' in me) {
+          const p = me.profile;
+          setFullName(p?.fullName || user.name || '');
+          setPhone(p?.phone || user.phone || '');
+          setEmail(me.email || user.email || '');
+          setCourse(p?.course || '');
+          setDepartment(p?.department || '');
+          setBatch(p?.batch || '');
+          setSemester(p?.semester || '');
+          setBio(p?.bio || '');
+          setSkills(p?.skills?.join(', ') || '');
         }
       } else {
         const p = await api.profile.get({token, signal});
@@ -107,7 +110,7 @@ export function EditProfileScreen({navigation}: Props) {
       if (user.role === 'STUDENT') {
         await api.students.update({
           token,
-          id: user.id,
+          id: user.studentId ?? user.id,
           body: {
             fullName: fullName.trim(),
             phone: phone.trim() || undefined,
@@ -237,12 +240,13 @@ export function EditProfileScreen({navigation}: Props) {
               {/* Academic Info (For Students) */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>ACADEMIC & INSTITUTE DETAILS</Text>
+                <Text style={styles.sectionNote}>Managed by your institute admin · Contact them to update</Text>
                 <View style={styles.fieldWrap}>
                   <Text style={styles.label}>Course / Program</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, styles.disabledInput]}
                     value={course}
-                    onChangeText={setCourse}
+                    editable={false}
                     placeholder="e.g. B.A. Performing Arts"
                     placeholderTextColor={colors.textMuted}
                   />
@@ -251,9 +255,9 @@ export function EditProfileScreen({navigation}: Props) {
                 <View style={styles.fieldWrap}>
                   <Text style={styles.label}>Department</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, styles.disabledInput]}
                     value={department}
-                    onChangeText={setDepartment}
+                    editable={false}
                     placeholder="e.g. Drama / Film Production"
                     placeholderTextColor={colors.textMuted}
                   />
@@ -263,9 +267,9 @@ export function EditProfileScreen({navigation}: Props) {
                   <View style={[styles.fieldWrap, {flex: 1}]}>
                     <Text style={styles.label}>Batch</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, styles.disabledInput]}
                       value={batch}
-                      onChangeText={setBatch}
+                      editable={false}
                       placeholder="2024"
                       placeholderTextColor={colors.textMuted}
                     />
@@ -274,9 +278,9 @@ export function EditProfileScreen({navigation}: Props) {
                   <View style={[styles.fieldWrap, {flex: 1}]}>
                     <Text style={styles.label}>Semester</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, styles.disabledInput]}
                       value={semester}
-                      onChangeText={setSemester}
+                      editable={false}
                       placeholder="4"
                       placeholderTextColor={colors.textMuted}
                     />
@@ -394,7 +398,15 @@ const styles = StyleSheet.create({
     height: 48,
   },
   disabledInput: {
-    opacity: 0.6,
+    opacity: 0.55,
+  },
+  sectionNote: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginBottom: spacing.md,
+    marginLeft: 4,
+    opacity: 0.8,
   },
   textArea: {
     height: 90,

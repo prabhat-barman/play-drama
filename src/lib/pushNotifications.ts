@@ -222,6 +222,13 @@ export async function unregisterDeviceFromPush(
   authToken: string,
 ): Promise<void> {
   try {
+    // Must be registered for remote messages before calling getToken.
+    if (Platform.OS === 'ios') {
+      const isRegistered = isDeviceRegisteredForRemoteMessages(getMessaging());
+      if (!isRegistered) {
+        await registerDeviceForRemoteMessages(getMessaging());
+      }
+    }
     const fcmToken = await getToken(getMessaging());
     if (!fcmToken) return;
     await api.deviceTokens.unregister({token: authToken, deviceToken: fcmToken});

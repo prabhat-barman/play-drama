@@ -25,7 +25,7 @@ export type RootStackParamList = {
   Notifications: undefined;
   ChangePassword: undefined;
   ActorProfile: {studentId: string};
-  InstituteProfile: {instituteId?: string; studentId?: string};
+  InstituteProfile: {id?: string; instituteId?: string; studentId?: string};
   EditProfile: undefined;
 };
 

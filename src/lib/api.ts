@@ -120,6 +120,13 @@ export type StudentAuthProfile = {
   admissionNumber?: string;
   instituteId?: string;
   isDeleted?: boolean;
+  // Academic fields returned by /auth/me → profile
+  course?: string;
+  department?: string;
+  batch?: string;
+  semester?: string;
+  bio?: string;
+  skills?: string[];
 };
 
 export type StudentMeResponse = {
@@ -273,6 +280,7 @@ export type StudentAchievement = {
 
 export type StudentInstituteSummary = {
   _id?: string;
+  id?: string;
   name?: string;
   logo?: string;
 };
@@ -380,6 +388,7 @@ export type InstituteSummary = {
   name: string;
   slug?: string;
   logo?: string;
+  logoUrl?: string;
   city?: string;
   followersCount?: number;
   webseriesCount?: number;
