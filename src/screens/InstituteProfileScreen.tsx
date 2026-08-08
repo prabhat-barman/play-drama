@@ -33,7 +33,7 @@ type InstituteBundle = {
 };
 
 export function InstituteProfileScreen({navigation, route}: Props) {
-  const {token} = useAuth();
+  const {token, user} = useAuth();
   const {id, instituteId, studentId} = route.params || {};
 
   const fetchInstituteData = useCallback(
@@ -49,7 +49,10 @@ export function InstituteProfileScreen({navigation, route}: Props) {
       let students: Student[] = [];
       let series: Webseries[] = [];
 
-      if (!instId && studentId) {
+      const isStudent = user?.role === 'STUDENT';
+
+      // If no instId given, try to get it from the student's own record
+      if (!instId && studentId && !isStudent) {
         try {
           const detail = await api.students.get({token, id: studentId, signal});
           instId = detail.institute?._id || detail.institute?.id;
@@ -60,7 +63,17 @@ export function InstituteProfileScreen({navigation, route}: Props) {
         }
       }
 
-      if (instId) {
+      // For STUDENT role: /institutes/* endpoints return 403.
+      // Use student-accessible endpoints only.
+      if (isStudent) {
+        // Institute name from auth context (already available from /auth/me)
+        const [studentsRes, seriesRes] = await Promise.allSettled([
+          api.students.list({token, limit: 12, signal}),
+          api.webseries.list({token, status: 'PUBLISHED', limit: 10, signal}),
+        ]);
+        students = studentsRes.status === 'fulfilled' ? studentsRes.value.data : [];
+        series = seriesRes.status === 'fulfilled' ? seriesRes.value.data : [];
+      } else if (instId) {
         try {
           const detail = await api.institutes.get({token, id: instId, signal});
           if (detail) {
@@ -110,7 +123,7 @@ export function InstituteProfileScreen({navigation, route}: Props) {
         series,
       };
     },
-    [token, id, instituteId, studentId],
+    [token, user, id, instituteId, studentId],
   );
 
   const {data, loading, error, reload} = useApi(fetchInstituteData, [

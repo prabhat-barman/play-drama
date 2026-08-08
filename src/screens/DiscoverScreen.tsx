@@ -65,12 +65,11 @@ export function DiscoverScreen({navigation}: Props) {
         return {trending: [], explore: [], actors: []};
       }
       try {
-        const isSearchOrFilter = !!genre || !!q.trim();
+        const isSearchOrFilter = !!genre;
         const res = isSearchOrFilter
           ? await api.discover.search({
               token,
               genre,
-              q: q.trim() || undefined,
               signal,
             })
           : await api.discover.feed({token, signal});

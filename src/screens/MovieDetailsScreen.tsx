@@ -41,12 +41,11 @@ type Props = NativeStackScreenProps<RootStackParamList, 'MovieDetails'>;
 
 type TabKey = 'episodes' | 'related' | 'cast';
 
-type Bundle = {
+type SeriesBundle = {
   movie: ContentItem;
-  episodes: ApiEpisode[];
   related: ContentItem[];
   rawCast?: CastMember[];
-  seasons?: Season[];
+  seasons: Season[];
 };
 
 export function MovieDetailsScreen({navigation, route}: Props) {
@@ -56,38 +55,44 @@ export function MovieDetailsScreen({navigation, route}: Props) {
   const [liked, setLiked] = useState(false);
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
 
-
-  const fetchBundle = useCallback(
-    async (signal: AbortSignal): Promise<Bundle> => {
+  // ── Fetch 1: Series detail + related (fires once on mount, not on season change)
+  const fetchSeriesBundle = useCallback(
+    async (signal: AbortSignal): Promise<SeriesBundle> => {
       if (!token) {
         throw new Error('Not signed in');
       }
       const detail = await api.webseries.get({token, id, signal});
       const movie = webseriesToContent(detail);
-      const seasons = Array.isArray(detail.seasons) ? (detail.seasons as Season[]) : undefined;
+      let seasons: Season[] = Array.isArray(detail.seasons) && detail.seasons.length > 0
+        ? (detail.seasons as Season[])
+        : [];
 
-      // Determine active season parameter
-      let activeSeasonId: string | undefined;
-      if (selectedSeasonId) {
-        activeSeasonId = selectedSeasonId;
-      } else if (seasons && seasons.length > 0) {
-        activeSeasonId = seasons[0]._id;
+      if (seasons.length === 0) {
+        try {
+          const fetchedSeasons = await api.seasons.list({token, webSeriesId: id, signal});
+          if (Array.isArray(fetchedSeasons) && fetchedSeasons.length > 0) {
+            seasons = fetchedSeasons;
+          }
+        } catch {
+          // Ignore fallback error
+        }
       }
 
-      const activeSeasonIdParam = activeSeasonId && activeSeasonId !== 'season_1'
-        ? activeSeasonId
-        : undefined;
+      if (seasons.length === 0) {
+        seasons = [
+          {
+            _id: 'season_1',
+            seasonNumber: 1,
+            title: 'Season 1',
+            description: null,
+            thumbnail: null,
+            releaseDate: null,
+            totalEpisodes: detail.totalEpisodes ?? 0,
+          },
+        ];
+      }
 
-      // Related + episodes in parallel — episodes only needed if the
-      // series actually has any, but we fire eagerly and let the UI decide.
-      const [episodesRes, relatedRes] = await Promise.allSettled([
-        api.episodes.list({
-          token,
-          webSeriesId: id,
-          seasonId: activeSeasonIdParam,
-          limit: 100,
-          signal,
-        }),
+      const [relatedRes] = await Promise.allSettled([
         api.webseries.list({
           token,
           status: 'PUBLISHED',
@@ -96,10 +101,6 @@ export function MovieDetailsScreen({navigation, route}: Props) {
           signal,
         }),
       ]);
-      const episodes =
-        episodesRes.status === 'fulfilled'
-          ? episodesRes.value.data.slice().sort((a, b) => a.episodeNumber - b.episodeNumber)
-          : [];
       const related =
         relatedRes.status === 'fulfilled'
           ? relatedRes.value.data
@@ -111,39 +112,66 @@ export function MovieDetailsScreen({navigation, route}: Props) {
         Array.isArray(detail.cast) && typeof detail.cast[0] !== 'string'
           ? (detail.cast as CastMember[])
           : undefined;
-      return {movie, episodes, related, rawCast, seasons};
+      return {movie, related, rawCast, seasons};
     },
-    [token, id, selectedSeasonId],
+    [token, id],
   );
 
-  const {data, loading, error, errorStatus, reload} = useApi(fetchBundle, [
-    token,
-    id,
-    selectedSeasonId,
-  ]);
+  const {
+    data: seriesData,
+    loading: seriesLoading,
+    error,
+    errorStatus,
+    reload,
+  } = useApi(fetchSeriesBundle, [token, id]);
 
-  const movie = data?.movie;
-  const episodes = data?.episodes ?? [];
-  const related = data?.related ?? [];
-  const rawCast = data?.rawCast ?? [];
+  const movie = seriesData?.movie;
+  const related = seriesData?.related ?? [];
+  const rawCast = seriesData?.rawCast ?? [];
+  // Memoize so the array reference is stable — prevents activeSeasonId
+  // useMemo from firing on every render when seriesData is null/unchanged.
+  const seasons = useMemo(
+    () => seriesData?.seasons ?? [],
+    [seriesData],
+  );
 
-  // Parse seasons from data, fallback to single default season if undefined/empty
-  const seasons = data?.seasons && data.seasons.length > 0
-    ? data.seasons
-    : [
-        {
-          _id: 'season_1',
-          seasonNumber: 1,
-          title: 'Season 1',
-          description: null,
-          thumbnail: null,
-          releaseDate: null,
-          totalEpisodes: episodes.length,
-        }
-      ];
+  // Derive the active season: user pick → first season from API → fallback
+  const activeSeasonId = useMemo(() => {
+    if (selectedSeasonId) return selectedSeasonId;
+    if (seasons.length > 0) return seasons[0]._id;
+    return 'season_1';
+  }, [selectedSeasonId, seasons]);
 
-  const activeSeasonId = selectedSeasonId || seasons[0]?._id || 'season_1';
-  const activeSeasonNumber = seasons.find(s => s._id === activeSeasonId)?.seasonNumber || 1;
+  const activeSeasonNumber =
+    seasons.find(s => s._id === activeSeasonId)?.seasonNumber ?? 1;
+
+  // ── Fetch 2: Episodes for the active season (re-runs only when season changes)
+  const fetchEpisodes = useCallback(
+    async (signal: AbortSignal): Promise<ApiEpisode[]> => {
+      if (!token) {
+        return [];
+      }
+      const seasonIdParam =
+        activeSeasonId && activeSeasonId !== 'season_1' ? activeSeasonId : undefined;
+      const res = await api.episodes.list({
+        token,
+        webSeriesId: id,
+        seasonId: seasonIdParam,
+        limit: 100,
+        signal,
+      });
+      return res.data.slice().sort((a, b) => a.episodeNumber - b.episodeNumber);
+    },
+    [token, id, activeSeasonId],
+  );
+
+  const {data: episodesData, loading: episodesLoading} = useApi(
+    fetchEpisodes,
+    [token, id, activeSeasonId],
+  );
+
+  const episodes = episodesData ?? [];
+  const loading = seriesLoading;
 
   const isSeries =
     (movie?.totalEpisodes ?? 0) > 0 || episodes.length > 0;
@@ -187,19 +215,36 @@ export function MovieDetailsScreen({navigation, route}: Props) {
   if (loading && !movie) {
     return (
       <View style={styles.root}>
-        <Skeleton width="100%" height={340} borderRadius={0} />
-        <View style={{paddingHorizontal: spacing.md, marginTop: -80, gap: 12}}>
-          <Skeleton width="80%" height={32} borderRadius={6} />
-          <Skeleton width="50%" height={16} borderRadius={4} />
-          <Skeleton width="100%" height={48} borderRadius={radius.md} style={{marginTop: 6}} />
+        {/* Hero image placeholder */}
+        <Skeleton width="100%" height={320} borderRadius={0} />
+        {/* Back button placeholder */}
+        <SafeAreaView
+          edges={['top']}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none">
+          <View style={{paddingHorizontal: spacing.md, paddingTop: spacing.xs}}>
+            <Skeleton width={40} height={40} borderRadius={20} />
+          </View>
+        </SafeAreaView>
+        {/* Body content skeleton */}
+        <View style={{paddingHorizontal: spacing.md, marginTop: 20, gap: 12}}>
+          <Skeleton width="75%" height={34} borderRadius={6} />
+          <Skeleton width="45%" height={14} borderRadius={4} />
+          <Skeleton width="100%" height={48} borderRadius={radius.md} style={{marginTop: 4}} />
           <View style={{flexDirection: 'row', gap: 10}}>
             <Skeleton width="100%" height={42} borderRadius={radius.md} style={{flex: 1}} />
             <Skeleton width="100%" height={42} borderRadius={radius.md} style={{flex: 1}} />
             <Skeleton width="100%" height={42} borderRadius={radius.md} style={{flex: 1}} />
           </View>
-          <Skeleton width="100%" height={14} borderRadius={4} style={{marginTop: 10}} />
-          <Skeleton width="90%" height={14} borderRadius={4} />
-          <Skeleton width="70%" height={14} borderRadius={4} />
+          <View style={{gap: 8, marginTop: 8}}>
+            <Skeleton width="100%" height={14} borderRadius={4} />
+            <Skeleton width="92%" height={14} borderRadius={4} />
+            <Skeleton width="70%" height={14} borderRadius={4} />
+          </View>
+          <View style={{gap: 6, marginTop: 4}}>
+            <Skeleton width="55%" height={12} borderRadius={4} />
+            <Skeleton width="45%" height={12} borderRadius={4} />
+          </View>
         </View>
       </View>
     );
@@ -444,7 +489,20 @@ export function MovieDetailsScreen({navigation, route}: Props) {
               </Text>
             </View>
 
-            {episodes.length ? (
+            {episodesLoading ? (
+              // Lightweight skeleton while episodes load for a new season
+              <View style={{gap: 12, marginTop: 4}}>
+                {[0, 1, 2].map(i => (
+                  <View key={i} style={styles.epRow}>
+                    <Skeleton width={120} height={68} borderRadius={8} />
+                    <View style={{flex: 1, gap: 8}}>
+                      <Skeleton width="80%" height={14} borderRadius={4} />
+                      <Skeleton width="55%" height={12} borderRadius={4} />
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : episodes.length ? (
               episodes.map(e => (
                 <Pressable
                   key={e._id}

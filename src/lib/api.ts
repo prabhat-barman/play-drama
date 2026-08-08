@@ -35,6 +35,10 @@ export type PublicUser = {
   // caller having to guard on a role check.
   phone?: string | null;
   avatarUrl?: string | null;
+  // For STUDENT role only: the student record _id (MongoDB ObjectId) used
+  // for GET /mobile-users/students/:id. Differs from `id` which is the
+  // auth user ID (JWT subject).
+  studentId?: string | null;
 };
 
 export type AuthTokens = {
@@ -116,6 +120,13 @@ export type StudentAuthProfile = {
   admissionNumber?: string;
   instituteId?: string;
   isDeleted?: boolean;
+  // Academic fields returned by /auth/me → profile
+  course?: string;
+  department?: string;
+  batch?: string;
+  semester?: string;
+  bio?: string;
+  skills?: string[];
 };
 
 export type StudentMeResponse = {
@@ -269,6 +280,7 @@ export type StudentAchievement = {
 
 export type StudentInstituteSummary = {
   _id?: string;
+  id?: string;
   name?: string;
   logo?: string;
 };
@@ -376,6 +388,7 @@ export type InstituteSummary = {
   name: string;
   slug?: string;
   logo?: string;
+  logoUrl?: string;
   city?: string;
   followersCount?: number;
   webseriesCount?: number;
@@ -495,7 +508,71 @@ export type HeartbeatRequest = {
   playbackState?: HeartbeatState;
 };
 
-// ---- Watch progress / history (Phase 5) ----
+// ---- Watch history & Continue Watching ----
+export type WatchHistorySeries = {
+  id: string;
+  title: string;
+  thumbnail: string;
+  coverImage?: string;
+  isPremium?: boolean;
+  totalEpisodes?: number;
+  rating?: number;
+  releaseDate?: string;
+  redirectType?: 'movie' | 'series' | string;
+};
+
+export type WatchHistoryEpisode = {
+  id: string;
+  title: string;
+  thumbnail?: string;
+  duration?: number;
+  episodeNumber?: number;
+};
+
+export type WatchHistorySeason = {
+  id: string;
+  seasonNumber: number;
+  title: string;
+} | null;
+
+export type WatchHistoryItem = {
+  _id: string;
+  series: WatchHistorySeries;
+  episode: WatchHistoryEpisode;
+  season?: WatchHistorySeason;
+  progressSeconds: number;
+  totalSeconds: number;
+  percentage: number;
+  completed: boolean;
+  watchedAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WatchProgressInput = {
+  progressSeconds: number;
+  totalSeconds?: number;
+  completed?: boolean;
+};
+
+export type ContinueWatchingItem = {
+  id: string;
+  title: string;
+  thumbnail: string;
+  isPremium?: boolean;
+  releaseDate?: string;
+  rating?: number;
+  progress: number;
+  duration: number;
+  percentage: number;
+  episodeId: string;
+  seasonId?: string | null;
+  seasonNumber?: number | null;
+  redirectType?: 'movie' | 'series' | string;
+  redirectId?: string;
+};
+
+// Legacy compatibility aliases
 export type WatchProgress = {
   episodeId: string;
   webSeriesId: string;
@@ -505,27 +582,10 @@ export type WatchProgress = {
   updatedAt: string;
 };
 
-export type WatchProgressUpsert = {
-  episodeId: string;
-  positionSec: number;
-  durationSec: number;
-  completed?: boolean;
-};
-
-export type ContinueWatchingItem = {
-  webseries: Webseries;
-  episode: {
-    id: string;
-    title: string;
-    episodeNumber: number;
-    thumbnail?: string;
-    durationSec?: number;
-  };
-  progress: WatchProgress;
-};
-
-export type WatchHistoryItem = ContinueWatchingItem & {
-  watchedAt: string;
+export type WatchProgressUpsert = WatchProgressInput & {
+  episodeId?: string;
+  positionSec?: number;
+  durationSec?: number;
 };
 
 // ---- Search (Phase 6) ----
@@ -1562,11 +1622,12 @@ export const api = {
         signal: input.signal,
       }),
 
-    continueWatching: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
+    continueWatching: (input: {token?: string | null; limit?: number; signal?: AbortSignal} = {}) =>
       request<ContinueWatchingItem[]>('/home/continue-watching', {
         method: 'GET',
         token: input.token,
         signal: input.signal,
+        query: {limit: input.limit},
       }),
 
     upcomingMovies: (input: {token?: string | null; signal?: AbortSignal} = {}) =>
@@ -1815,18 +1876,29 @@ export const api = {
       }),
   },
 
-  // ---- Phase 5: Watch progress + history ----
-  watchProgress: {
-    upsert: (input: {token: string; body: WatchProgressUpsert}) =>
-      request<WatchProgress>('/watch-progress', {
-        method: 'POST',
+  // ---- Watch history & Continue watching ----
+  watchHistory: {
+    list: (input: {
+      token: string;
+      completed?: boolean;
+      page?: number;
+      limit?: number;
+      signal?: AbortSignal;
+    }) =>
+      requestPaginated<WatchHistoryItem>('/mobile-users/watch-history', {
+        method: 'GET',
         token: input.token,
-        body: input.body,
+        signal: input.signal,
+        query: {
+          completed: input.completed !== undefined ? String(input.completed) : undefined,
+          page: input.page,
+          limit: input.limit,
+        },
       }),
 
     get: (input: {token: string; episodeId: string; signal?: AbortSignal}) =>
-      request<WatchProgress>(
-        `/watch-progress/${encodeURIComponent(input.episodeId)}`,
+      request<WatchHistoryItem>(
+        `/mobile-users/watch-history/${encodeURIComponent(input.episodeId)}`,
         {
           method: 'GET',
           token: input.token,
@@ -1834,36 +1906,80 @@ export const api = {
         },
       ),
 
-    continueWatching: (input: {
+    updateProgress: (input: {
       token: string;
+      episodeId: string;
+      body: WatchProgressInput;
+    }) =>
+      request<WatchHistoryItem>(
+        `/mobile-users/watch-history/${encodeURIComponent(input.episodeId)}`,
+        {
+          method: 'POST',
+          token: input.token,
+          body: input.body,
+        },
+      ),
+
+    remove: (input: {token: string; episodeId: string}) =>
+      request<MessageResponseData | Record<string, never>>(
+        `/mobile-users/watch-history/${encodeURIComponent(input.episodeId)}`,
+        {method: 'DELETE', token: input.token},
+      ),
+
+    clearAll: (input: {token: string}) =>
+      request<MessageResponseData | Record<string, never>>(
+        '/mobile-users/watch-history',
+        {method: 'DELETE', token: input.token},
+      ),
+  },
+
+  // Legacy compatibility wrapper for watchProgress
+  watchProgress: {
+    upsert: (input: {
+      token: string;
+      episodeId?: string;
+      body?: any;
+      positionSec?: number;
+      durationSec?: number;
+      completed?: boolean;
+    }) => {
+      const epId = input.episodeId || input.body?.episodeId;
+      const progressSec =
+        input.body?.progressSeconds ??
+        input.body?.positionSec ??
+        input.positionSec ??
+        0;
+      const totalSec =
+        input.body?.totalSeconds ?? input.body?.durationSec ?? input.durationSec;
+      const completed = input.body?.completed ?? input.completed;
+      return api.watchHistory.updateProgress({
+        token: input.token,
+        episodeId: epId,
+        body: {progressSeconds: progressSec, totalSeconds: totalSec, completed},
+      });
+    },
+
+    get: (input: {token: string; episodeId: string; signal?: AbortSignal}) =>
+      api.watchHistory.get(input),
+
+    continueWatching: (input: {
+      token?: string | null;
       limit?: number;
       signal?: AbortSignal;
     }) =>
-      request<ContinueWatchingItem[]>('/me/continue-watching', {
-        method: 'GET',
-        token: input.token,
-        signal: input.signal,
-        query: {limit: input.limit},
-      }),
+      api.home.continueWatching(input),
 
     history: (input: {
       token: string;
       page?: number;
       limit?: number;
+      completed?: boolean;
       signal?: AbortSignal;
     }) =>
-      requestPaginated<WatchHistoryItem>('/me/watch-history', {
-        method: 'GET',
-        token: input.token,
-        signal: input.signal,
-        query: {page: input.page, limit: input.limit},
-      }),
+      api.watchHistory.list(input),
 
     removeHistory: (input: {token: string; id: string}) =>
-      request<MessageResponseData | Record<string, never>>(
-        `/me/watch-history/${encodeURIComponent(input.id)}`,
-        {method: 'DELETE', token: input.token},
-      ),
+      api.watchHistory.remove({token: input.token, episodeId: input.id}),
   },
 
   // ---- Watchlist ----
@@ -2352,6 +2468,9 @@ export function mePayloadToPublicUser(payload: MeResponseData): PublicUser {
       emailVerified: true,
       instituteId: payload.instituteId ?? p?.instituteId ?? null,
       phone: p?.phone ?? null,
+      // Store the student record _id so screens can call
+      // GET /mobile-users/students/:studentId directly.
+      studentId: p?._id ?? null,
     };
   }
   // MOBILE_USER: flattened MobileUserProfile
