@@ -1,5 +1,7 @@
-import React, {useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
+  Dimensions,
+  FlatList,
   Pressable,
   StyleSheet,
   Text,
@@ -11,6 +13,12 @@ import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {colors, spacing} from '../theme/colors';
 import {BookmarkIcon, DownloadIcon} from '../components/icons';
+import {MovieCard} from '../components/MovieCard';
+import {MovieCardSkeleton} from '../components/Skeleton';
+import {api} from '../lib/api';
+import {webseriesToContent} from '../lib/adapters';
+import {useApi} from '../lib/useApi';
+import {useAuth} from '../context/AuthContext';
 import type {MainTabParamList} from '../navigation/MainTabs';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 
@@ -21,14 +29,28 @@ type Props = CompositeScreenProps<
 
 type TabKey = 'watchlist' | 'downloads';
 
-// Backend endpoints for watchlist and downloads are not implemented yet —
-// tracked under "Known gaps" in docs/MOBILE_API.md (WatchHistory model
-// exists but no HTTP routes, no downloads model). This screen currently
-// shows an empty state; wire it to real endpoints once the backend ships
-// them, e.g. GET /watchlist, GET /downloads.
-export function WatchlistScreen({navigation}: Props) {
+const {width: windowWidth} = Dimensions.get('window');
+const cardWidth = Math.floor((windowWidth - spacing.md * 2 - (spacing.sm + 2)) / 2);
 
+export function WatchlistScreen({navigation}: Props) {
+  const {token} = useAuth();
   const [tab, setTab] = useState<TabKey>('watchlist');
+
+  const fetchWatchlist = useCallback(
+    async (signal: AbortSignal) => {
+      if (!token) {
+        return null;
+      }
+      const res = await api.watchlist.list({token, limit: 50, signal});
+      return res.data.map(webseriesToContent);
+    },
+    [token],
+  );
+
+  const {data: watchlistItems, loading, error, reload} = useApi(
+    fetchWatchlist,
+    [token, tab],
+  );
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -61,9 +83,43 @@ export function WatchlistScreen({navigation}: Props) {
         </Pressable>
       </View>
 
-      <View style={styles.state}>
-        {tab === 'watchlist' ? (
-          <>
+      {tab === 'watchlist' ? (
+        loading && (!watchlistItems || !watchlistItems.length) ? (
+          <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm + 2, justifyContent: 'center', marginTop: spacing.md, paddingHorizontal: spacing.md}}>
+            <MovieCardSkeleton width={cardWidth} />
+            <MovieCardSkeleton width={cardWidth} />
+            <MovieCardSkeleton width={cardWidth} />
+            <MovieCardSkeleton width={cardWidth} />
+          </View>
+        ) : error ? (
+          <View style={styles.state}>
+            <Text style={styles.stateTitle}>Couldn't load watchlist</Text>
+            <Text style={styles.stateBody}>{error}</Text>
+            <Pressable onPress={reload} style={styles.browseBtn}>
+              <Text style={styles.browseText}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : watchlistItems && watchlistItems.length > 0 ? (
+          <FlatList
+            data={watchlistItems}
+            keyExtractor={m => m.id}
+            renderItem={({item}) => (
+              <View style={styles.gridItem}>
+                <MovieCard
+                  movie={item}
+                  width={cardWidth}
+                  showTitle
+                  onPress={() => navigation.navigate('MovieDetails', {id: item.id})}
+                />
+              </View>
+            )}
+            numColumns={2}
+            columnWrapperStyle={styles.row}
+            contentContainerStyle={styles.grid}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : (
+          <View style={styles.state}>
             <BookmarkIcon size={44} color={colors.textMuted} />
             <Text style={styles.stateTitle}>Your watchlist is empty</Text>
             <Text style={styles.stateBody}>
@@ -74,23 +130,22 @@ export function WatchlistScreen({navigation}: Props) {
               style={({pressed}) => [styles.browseBtn, pressed && {opacity: 0.75}]}>
               <Text style={styles.browseText}>Browse Web Series</Text>
             </Pressable>
-          </>
-        ) : (
-          <>
-            <DownloadIcon size={44} color={colors.textMuted} />
-            <Text style={styles.stateTitle}>No downloads yet</Text>
-            <Text style={styles.stateBody}>
-              Downloaded titles will appear here for offline viewing.
-            </Text>
-            <Pressable
-              onPress={() => navigation.navigate('Discover')}
-              style={({pressed}) => [styles.browseBtn, pressed && {opacity: 0.75}]}>
-              <Text style={styles.browseText}>Explore Content</Text>
-            </Pressable>
-          </>
-        )}
-      </View>
-
+          </View>
+        )
+      ) : (
+        <View style={styles.state}>
+          <DownloadIcon size={44} color={colors.textMuted} />
+          <Text style={styles.stateTitle}>No downloads yet</Text>
+          <Text style={styles.stateBody}>
+            Downloaded titles will appear here for offline viewing.
+          </Text>
+          <Pressable
+            onPress={() => navigation.navigate('Discover')}
+            style={({pressed}) => [styles.browseBtn, pressed && {opacity: 0.75}]}>
+            <Text style={styles.browseText}>Explore Content</Text>
+          </Pressable>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -181,5 +236,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
   },
+  grid: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xl,
+  },
+  row: {
+    gap: spacing.sm + 2,
+    marginBottom: spacing.md,
+  },
+  gridItem: {},
 });
 

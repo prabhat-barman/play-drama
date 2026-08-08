@@ -28,7 +28,7 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<RootStackParamList>
 >;
 
-const QUICK = ['Sci-Fi', 'Action', 'Thriller', 'Drama', 'Animation', 'Crime'];
+const QUICK = ['All Genres', 'Sci-Fi', 'Action', 'Thriller', 'Drama', 'Animation', 'Crime'];
 
 const {width: windowWidth} = Dimensions.get('window');
 const cardWidth = Math.floor((windowWidth - spacing.md * 2 - (spacing.sm + 2)) / 2);
@@ -39,11 +39,22 @@ const SEARCH_DEBOUNCE_MS = 350;
 // render (react/no-unstable-nested-components).
 const ChipSeparator = () => <View style={styles.chipGap} />;
 
-export function SearchScreen({navigation}: Props) {
+export function SearchScreen({navigation, route}: Props) {
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [genre, setGenre] = useState<string | null>(null);
   const {token} = useAuth();
+  const inputRef = React.useRef<TextInput>(null);
+
+  useEffect(() => {
+    const focusParam = (route.params as any)?.focus;
+    if (focusParam) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 150);
+      navigation.setParams({focus: undefined} as any);
+    }
+  }, [route.params, navigation]);
 
   // Debounce user typing so we don't hammer the backend on every keystroke.
   useEffect(() => {
@@ -80,9 +91,14 @@ export function SearchScreen({navigation}: Props) {
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={styles.brand}>PLAY DRAMA</Text>
+      </View>
+
       <View style={styles.searchBar}>
         <SearchIcon size={20} color={colors.textMuted} />
         <TextInput
+          ref={inputRef}
           value={q}
           onChangeText={setQ}
           placeholder="Search movies, shows, cast..."
@@ -107,10 +123,10 @@ export function SearchScreen({navigation}: Props) {
           showsHorizontalScrollIndicator={false}
           ItemSeparatorComponent={ChipSeparator}
           renderItem={({item}) => {
-            const selected = genre === item;
+            const selected = item === 'All Genres' ? genre === null : genre === item;
             return (
               <Pressable
-                onPress={() => setGenre(selected ? null : item)}
+                onPress={() => setGenre(item === 'All Genres' ? null : item)}
                 hitSlop={4}
                 style={({pressed}) => [
                   styles.chip,
@@ -180,16 +196,32 @@ export function SearchScreen({navigation}: Props) {
 
 const styles = StyleSheet.create({
   root: {flex: 1, backgroundColor: colors.background},
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  brand: {
+    color: colors.brand,
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: -0.6,
+  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm + 2,
     marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
+    marginBottom: spacing.md,
     paddingHorizontal: spacing.md,
-    height: 48,
+    height: 44,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
   input: {
     flex: 1,
@@ -210,8 +242,7 @@ const styles = StyleSheet.create({
   chipsWrap: {
     height: 44,
     justifyContent: 'center',
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   chipsRow: {
     paddingHorizontal: spacing.md,
