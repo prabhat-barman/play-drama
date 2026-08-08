@@ -136,12 +136,14 @@ export function PlayerScreen({navigation, route}: Props) {
 
   const {data, loading, error, errorStatus, reload} = useApi(fetchBundle, [token, id, targetEpisodeId]);
 
-  const totalSec =
-    (data?.firstEpisode?.duration && data.firstEpisode.duration > 0
-      ? data.firstEpisode.duration
-      : null) ?? DEFAULT_TOTAL_SEC;
-
   const [current, setCurrent] = useState(0);
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
+
+  const totalSec = videoDuration !== null
+    ? videoDuration
+    : (data?.firstEpisode?.duration && data.firstEpisode.duration > 0
+      ? data.firstEpisode.duration
+      : DEFAULT_TOTAL_SEC);
   const [playing, setPlaying] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const fade = useRef(new Animated.Value(1)).current;
@@ -295,8 +297,11 @@ export function PlayerScreen({navigation, route}: Props) {
               setIsVideoLoading(true);
               setVideoError(null);
             }}
-            onLoad={() => {
+            onLoad={meta => {
               setIsVideoLoading(false);
+              if (meta && typeof meta.duration === 'number' && meta.duration > 0) {
+                setVideoDuration(meta.duration);
+              }
             }}
             onBuffer={({isBuffering}) => {
               setIsVideoLoading(isBuffering);
