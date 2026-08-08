@@ -75,7 +75,7 @@ export function ActorProfileScreen({navigation, route}: Props) {
     [token, studentId],
   );
 
-  const {data, loading, error, reload} = useApi(fetchActorBundle, [token, studentId]);
+  const {data, loading, error, errorStatus, reload} = useApi(fetchActorBundle, [token, studentId]);
 
   const detail = data?.detail;
   const webseries = data?.webseries ?? [];
@@ -100,6 +100,7 @@ export function ActorProfileScreen({navigation, route}: Props) {
   }
 
   if (error || !detail) {
+    const isNotFound = errorStatus === 404;
     return (
       <SafeAreaView style={styles.root} edges={['top']}>
         <View style={styles.header}>
@@ -110,11 +111,15 @@ export function ActorProfileScreen({navigation, route}: Props) {
         </View>
         <View style={styles.centerRoot}>
           <Text style={styles.errorText}>
-            {error || 'Actor profile not found'}
+            {isNotFound
+              ? 'Actor profile not set up yet.\nAsk the institute to complete your student profile.'
+              : error || 'Actor profile not found'}
           </Text>
-          <Pressable onPress={reload} style={styles.retryBtn}>
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
+          {!isNotFound ? (
+            <Pressable onPress={reload} style={styles.retryBtn}>
+              <Text style={styles.retryText}>Retry</Text>
+            </Pressable>
+          ) : null}
         </View>
       </SafeAreaView>
     );

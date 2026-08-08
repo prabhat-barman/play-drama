@@ -35,6 +35,10 @@ export type PublicUser = {
   // caller having to guard on a role check.
   phone?: string | null;
   avatarUrl?: string | null;
+  // For STUDENT role only: the student record _id (MongoDB ObjectId) used
+  // for GET /mobile-users/students/:id. Differs from `id` which is the
+  // auth user ID (JWT subject).
+  studentId?: string | null;
 };
 
 export type AuthTokens = {
@@ -2352,6 +2356,9 @@ export function mePayloadToPublicUser(payload: MeResponseData): PublicUser {
       emailVerified: true,
       instituteId: payload.instituteId ?? p?.instituteId ?? null,
       phone: p?.phone ?? null,
+      // Store the student record _id so screens can call
+      // GET /mobile-users/students/:studentId directly.
+      studentId: p?._id ?? null,
     };
   }
   // MOBILE_USER: flattened MobileUserProfile

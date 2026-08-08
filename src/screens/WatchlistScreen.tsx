@@ -58,7 +58,7 @@ export function WatchlistScreen({navigation}: Props) {
 
   const {data: watchlistItems, loading, error, reload} = useApi(
     fetchWatchlist,
-    [token, tab],
+    [token],
   );
 
   return (

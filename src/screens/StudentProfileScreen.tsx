@@ -169,7 +169,7 @@ export function StudentProfileScreen({navigation}: Props) {
             hint="See public actor profile page"
             onPress={() =>
               navigation.navigate('ActorProfile', {
-                studentId: user?.id || 'me',
+                studentId: user?.studentId || user?.id || 'me',
               })
             }
           />
@@ -180,7 +180,7 @@ export function StudentProfileScreen({navigation}: Props) {
               hint="See your institute profile page"
               onPress={() =>
                 navigation.navigate('InstituteProfile', {
-                  instituteId: user.instituteId,
+                  instituteId: user.instituteId ?? undefined,
                 })
               }
             />
