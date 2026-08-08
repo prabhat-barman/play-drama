@@ -10,6 +10,8 @@ import {
   getInitialNotification,
   AuthorizationStatus,
   FirebaseMessagingTypes,
+  registerDeviceForRemoteMessages,
+  isDeviceRegisteredForRemoteMessages,
 } from '@react-native-firebase/messaging';
 import notifee, {
   AndroidImportance,
@@ -179,6 +181,12 @@ export async function registerDeviceForPush(
 
     // iOS needs an APNs token first, but @react-native-firebase/messaging
     // handles the handshake internally when we ask for `getToken`.
+    if (Platform.OS === 'ios') {
+      const isRegistered = isDeviceRegisteredForRemoteMessages(getMessaging());
+      if (!isRegistered) {
+        await registerDeviceForRemoteMessages(getMessaging());
+      }
+    }
     const fcmToken = await getToken(getMessaging());
     if (!fcmToken) return null;
 

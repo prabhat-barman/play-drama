@@ -41,8 +41,17 @@ export function WatchlistScreen({navigation}: Props) {
       if (!token) {
         return null;
       }
-      const res = await api.watchlist.list({token, limit: 50, signal});
-      return res.data.map(webseriesToContent);
+      try {
+        const res = await api.watchlist.list({token, limit: 50, signal});
+        return res.data.map(webseriesToContent);
+      } catch (err: any) {
+        // If the backend returns a 404 (endpoint not implemented yet),
+        // gracefully return an empty array to show the empty watchlist state.
+        if (err?.status === 404 || err?.message?.includes('404')) {
+          return [];
+        }
+        throw err;
+      }
     },
     [token],
   );
