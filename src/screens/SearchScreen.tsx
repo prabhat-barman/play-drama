@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.sm,
   },
   brand: {
     color: colors.brand,
@@ -215,11 +215,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm + 2,
     marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
+    marginBottom: spacing.md,
     paddingHorizontal: spacing.md,
-    height: 48,
+    height: 44,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
   input: {
     flex: 1,
@@ -240,8 +242,7 @@ const styles = StyleSheet.create({
   chipsWrap: {
     height: 44,
     justifyContent: 'center',
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   chipsRow: {
     paddingHorizontal: spacing.md,
