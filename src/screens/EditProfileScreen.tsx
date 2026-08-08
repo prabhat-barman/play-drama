@@ -1,7 +1,6 @@
 import React, {useCallback, useState} from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -223,10 +222,9 @@ export function EditProfileScreen({navigation}: Props) {
             <View style={styles.fieldWrap}>
               <Text style={styles.label}>Phone Number</Text>
               <TextInput
-                style={[styles.input, styles.disabledInput]}
+                style={styles.input}
                 value={phone}
                 onChangeText={setPhone}
-                editable={false}
                 keyboardType="phone-pad"
                 placeholder="+919876543210"
                 placeholderTextColor={colors.textMuted}
@@ -234,83 +232,87 @@ export function EditProfileScreen({navigation}: Props) {
             </View>
           </View>
 
-          {/* Academic Info (For Students) */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ACADEMIC & INSTITUTE DETAILS</Text>
-            <View style={styles.fieldWrap}>
-              <Text style={styles.label}>Course / Program</Text>
-              <TextInput
-                style={styles.input}
-                value={course}
-                onChangeText={setCourse}
-                placeholder="e.g. B.A. Performing Arts"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
+          {user?.role === 'STUDENT' ? (
+            <>
+              {/* Academic Info (For Students) */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>ACADEMIC & INSTITUTE DETAILS</Text>
+                <View style={styles.fieldWrap}>
+                  <Text style={styles.label}>Course / Program</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={course}
+                    onChangeText={setCourse}
+                    placeholder="e.g. B.A. Performing Arts"
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
 
-            <View style={styles.fieldWrap}>
-              <Text style={styles.label}>Department</Text>
-              <TextInput
-                style={styles.input}
-                value={department}
-                onChangeText={setDepartment}
-                placeholder="e.g. Drama / Film Production"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
+                <View style={styles.fieldWrap}>
+                  <Text style={styles.label}>Department</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={department}
+                    onChangeText={setDepartment}
+                    placeholder="e.g. Drama / Film Production"
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
 
-            <View style={styles.rowTwo}>
-              <View style={[styles.fieldWrap, {flex: 1}]}>
-                <Text style={styles.label}>Batch</Text>
-                <TextInput
-                  style={styles.input}
-                  value={batch}
-                  onChangeText={setBatch}
-                  placeholder="2024"
-                  placeholderTextColor={colors.textMuted}
-                />
+                <View style={styles.rowTwo}>
+                  <View style={[styles.fieldWrap, {flex: 1}]}>
+                    <Text style={styles.label}>Batch</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={batch}
+                      onChangeText={setBatch}
+                      placeholder="2024"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+
+                  <View style={[styles.fieldWrap, {flex: 1}]}>
+                    <Text style={styles.label}>Semester</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={semester}
+                      onChangeText={setSemester}
+                      placeholder="4"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
+                </View>
               </View>
 
-              <View style={[styles.fieldWrap, {flex: 1}]}>
-                <Text style={styles.label}>Semester</Text>
-                <TextInput
-                  style={styles.input}
-                  value={semester}
-                  onChangeText={setSemester}
-                  placeholder="4"
-                  placeholderTextColor={colors.textMuted}
-                />
+              {/* Bio & Skills */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>BIO & SKILLS</Text>
+                <View style={styles.fieldWrap}>
+                  <Text style={styles.label}>Bio / Overview</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    value={bio}
+                    onChangeText={setBio}
+                    multiline
+                    numberOfLines={3}
+                    placeholder="Brief introduction..."
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
+
+                <View style={styles.fieldWrap}>
+                  <Text style={styles.label}>Skills (Comma separated)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={skills}
+                    onChangeText={setSkills}
+                    placeholder="Acting, Voiceover, Stage Drama"
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
               </View>
-            </View>
-          </View>
-
-          {/* Bio & Skills */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>BIO & SKILLS</Text>
-            <View style={styles.fieldWrap}>
-              <Text style={styles.label}>Bio / Overview</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={bio}
-                onChangeText={setBio}
-                multiline
-                numberOfLines={3}
-                placeholder="Brief introduction..."
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-
-            <View style={styles.fieldWrap}>
-              <Text style={styles.label}>Skills (Comma separated)</Text>
-              <TextInput
-                style={styles.input}
-                value={skills}
-                onChangeText={setSkills}
-                placeholder="Acting, Voiceover, Stage Drama"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-          </View>
+            </>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -91,7 +91,7 @@ export function MovieRowSkeleton({titleWidth = 140}: {titleWidth?: number}) {
   );
 }
 
-export function ScreenLoader({message = 'Loading...'}) {
+export function ScreenLoader({message: _ = 'Loading...'}) {
   return (
     <View style={styles.centeredLoader}>
       <Skeleton width={48} height={48} borderRadius={24} />

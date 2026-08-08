@@ -1,6 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
@@ -15,7 +14,7 @@ import {
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import type {CompositeScreenProps} from '@react-navigation/native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
@@ -35,7 +34,7 @@ import {
 } from '../components/icons';
 import {MovieRow} from '../components/MovieRow';
 import {SectionHeader} from '../components/SectionHeader';
-import {Skeleton, MovieRowSkeleton} from '../components/Skeleton';
+import {MovieRowSkeleton} from '../components/Skeleton';
 import {api} from '../lib/api';
 import {webseriesToContent} from '../lib/adapters';
 import {useApi} from '../lib/useApi';
@@ -972,8 +971,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
   },
   sectionContainer: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.lg,
   },
   hlist: {
     paddingHorizontal: spacing.md,

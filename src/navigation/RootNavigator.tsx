@@ -64,7 +64,7 @@ export function RootNavigator() {
       }}>
       {status === 'authenticated' ? (
         <>
-          <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen name="Main" component={isStudent ? StudentTabs : MainTabs} />
           <Stack.Screen
             name="MovieDetails"
             component={MovieDetailsScreen}

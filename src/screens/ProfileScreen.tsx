@@ -207,7 +207,7 @@ export function ProfileScreen({navigation}: Props) {
           <Row
             icon={<EditIcon size={18} color={colors.textPrimary} />}
             label="Edit Profile"
-            hint="Update info & academic details"
+            hint="Update your personal details"
             onPress={() => navigation.navigate('EditProfile')}
           />
           <Row

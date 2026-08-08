@@ -1,6 +1,5 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   Pressable,
@@ -109,7 +108,7 @@ export function DiscoverScreen({navigation}: Props) {
           explore: exploreItems,
           actors: actorsItems,
         };
-      } catch (err) {
+      } catch {
         // Fallback to webseries.list if discover API fails
         const listRes = await api.webseries.list({
           token,
@@ -205,171 +204,173 @@ export function DiscoverScreen({navigation}: Props) {
           })}
         </View>
 
-        {error && !hasAnyMedia ? (
-          <View style={styles.errorBlock}>
-            <Text style={styles.errorText}>{error}</Text>
-            <Pressable onPress={reload} style={styles.retryBtn}>
-              <Text style={styles.retryText}>Retry</Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        {loading && !hasAnyMedia ? (
+        {loading ? (
           <View style={{paddingHorizontal: spacing.md}}>
             <Skeleton width="100%" height={240} borderRadius={radius.lg} style={{marginBottom: spacing.md}} />
             <MovieRowSkeleton titleWidth={120} />
             <MovieRowSkeleton titleWidth={150} />
           </View>
-        ) : null}
-
-        {!loading && !error && !hasAnyMedia ? (
-          <View style={styles.emptyWrap}>
-            <View style={styles.emptyIconCircle}>
-              <SearchIcon size={30} color={colors.brand} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              No titles found {activeCategory !== 'All Genres' ? `in "${activeCategory}"` : ''}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              We couldn't find any webseries in this genre. Try switching back to "All Genres" or exploring another category.
-            </Text>
-            {activeCategory !== 'All Genres' ? (
-              <Pressable
-                onPress={() => setActiveCategory('All Genres')}
-                style={styles.resetBtn}>
-                <Text style={styles.resetBtnText}>View All Genres</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        ) : null}
-
-        {trending.length ? (
+        ) : (
           <>
-            <SectionHeader title="Trending Now" action="See All" compact />
-            <FlatList
-              horizontal
-              data={trending}
-              keyExtractor={m => m.id}
-              contentContainerStyle={styles.hlist}
-              ItemSeparatorComponent={() => (
-                <View style={{width: spacing.sm + 2}} />
-              )}
-              showsHorizontalScrollIndicator={false}
-              renderItem={({item}) => (
-                <MovieCard
-                  movie={item}
-                  width={130}
-                  onPress={() => openMovie(item.id)}
-                />
-              )}
-            />
-          </>
-        ) : null}
-
-        {students.length ? (
-          <>
-            <SectionHeader
-              title="Actors"
-              action="See All"
-              compact
-            />
-            <FlatList
-              horizontal
-              data={students}
-              keyExtractor={s => s._id}
-              contentContainerStyle={styles.hlist}
-              ItemSeparatorComponent={() => (
-                <View style={{width: spacing.sm + 2}} />
-              )}
-              showsHorizontalScrollIndicator={false}
-              renderItem={({item}) => <StudentAvatar student={item} />}
-            />
-          </>
-        ) : null}
-
-        {featured ? (
-          <>
-            <SectionHeader title="For You" action="Explore" compact />
-            <Pressable
-              onPress={() => openMovie(featured.id)}
-              style={styles.featured}>
-              <Image
-                source={{uri: featured.backdrop}}
-                style={styles.featuredImg}
-                resizeMode="cover"
-              />
-              <LinearGradient
-                colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.85)']}
-                style={StyleSheet.absoluteFill}
-              />
-              {featured.isNew ? (
-                <View style={styles.featuredBadge}>
-                  <Text style={styles.featuredBadgeText}>NEW RELEASE</Text>
-                </View>
-              ) : null}
-              <View style={styles.featuredBody}>
-                <Text style={styles.featuredTitle}>{featured.title}</Text>
-                <View style={styles.featuredMeta}>
-                  <StarIcon size={12} />
-                  <Text style={styles.featuredMetaText}>
-                    {featured.year ?? '—'}
-                  </Text>
-                  {featured.genres[0] ? (
-                    <>
-                      <View style={styles.dot} />
-                      <Text style={styles.featuredMetaText}>
-                        {featured.genres[0]}
-                      </Text>
-                    </>
-                  ) : null}
-                </View>
-                <Text numberOfLines={2} style={styles.featuredSynopsis}>
-                  {featured.synopsis}
-                </Text>
-                <View style={styles.featuredActions}>
-                  <View style={styles.playPill}>
-                    <PlayIcon size={14} color={colors.background} />
-                    <Text style={styles.playPillText}>Play</Text>
-                  </View>
-                  <View style={styles.miniList}>
-                    <Text style={styles.miniListText}>Details</Text>
-                  </View>
-                </View>
+            {error && !hasAnyMedia ? (
+              <View style={styles.errorBlock}>
+                <Text style={styles.errorText}>{error}</Text>
+                <Pressable onPress={reload} style={styles.retryBtn}>
+                  <Text style={styles.retryText}>Retry</Text>
+                </Pressable>
               </View>
-            </Pressable>
-          </>
-        ) : null}
+            ) : null}
 
+            {!error && !hasAnyMedia ? (
+              <View style={styles.emptyWrap}>
+                <View style={styles.emptyIconCircle}>
+                  <SearchIcon size={30} color={colors.brand} />
+                </View>
+                <Text style={styles.emptyTitle}>
+                  No titles found {activeCategory !== 'All Genres' ? `in "${activeCategory}"` : ''}
+                </Text>
+                <Text style={styles.emptySubtitle}>
+                  We couldn't find any webseries in this genre. Try switching back to "All Genres" or exploring another category.
+                </Text>
+                {activeCategory !== 'All Genres' ? (
+                  <Pressable
+                    onPress={() => setActiveCategory('All Genres')}
+                    style={styles.resetBtn}>
+                    <Text style={styles.resetBtnText}>View All Genres</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
 
+            {trending.length ? (
+              <>
+                <SectionHeader title="Trending Now" action="See All" compact />
+                <FlatList
+                  horizontal
+                  data={trending}
+                  keyExtractor={m => m.id}
+                  style={{marginBottom: spacing.lg}}
+                  contentContainerStyle={styles.hlist}
+                  ItemSeparatorComponent={() => (
+                    <View style={{width: spacing.sm + 2}} />
+                  )}
+                  showsHorizontalScrollIndicator={false}
+                  renderItem={({item}) => (
+                    <MovieCard
+                      movie={item}
+                      width={130}
+                      onPress={() => openMovie(item.id)}
+                    />
+                  )}
+                />
+              </>
+            ) : null}
 
-        {explore.length ? (
-          <>
-            <SectionHeader title="Explore Titles" compact />
-            <View style={styles.becauseWrap}>
-              {explore.map(m => (
+            {students.length ? (
+              <>
+                <SectionHeader
+                  title="Actors"
+                  action="See All"
+                  compact
+                />
+                <FlatList
+                  horizontal
+                  data={students}
+                  keyExtractor={s => s._id}
+                  style={{marginBottom: spacing.lg}}
+                  contentContainerStyle={styles.hlist}
+                  ItemSeparatorComponent={() => (
+                    <View style={{width: spacing.sm + 2}} />
+                  )}
+                  showsHorizontalScrollIndicator={false}
+                  renderItem={({item}) => <StudentAvatar student={item} />}
+                />
+              </>
+            ) : null}
+
+            {featured ? (
+              <>
+                <SectionHeader title="For You" action="Explore" compact />
                 <Pressable
-                  key={m.id}
-                  onPress={() => openMovie(m.id)}
-                  style={styles.becauseRow}>
+                  onPress={() => openMovie(featured.id)}
+                  style={styles.featured}>
                   <Image
-                    source={{uri: m.backdrop || m.poster}}
-                    style={styles.becauseImg}
+                    source={{uri: featured.backdrop}}
+                    style={styles.featuredImg}
                     resizeMode="cover"
                   />
-                  <View style={styles.becauseBody}>
-                    <Text style={styles.becauseTitle}>{m.title}</Text>
-                    <Text style={styles.becauseMeta}>
-                      {[m.year, m.genres[0], m.maturity]
-                        .filter(Boolean)
-                        .join(' · ')}
+                  <LinearGradient
+                    colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.85)']}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  {featured.isNew ? (
+                    <View style={styles.featuredBadge}>
+                      <Text style={styles.featuredBadgeText}>NEW RELEASE</Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.featuredBody}>
+                    <Text style={styles.featuredTitle}>{featured.title}</Text>
+                    <View style={styles.featuredMeta}>
+                      <StarIcon size={12} />
+                      <Text style={styles.featuredMetaText}>
+                        {featured.year ?? '—'}
+                      </Text>
+                      {featured.genres[0] ? (
+                        <>
+                          <View style={styles.dot} />
+                          <Text style={styles.featuredMetaText}>
+                            {featured.genres[0]}
+                          </Text>
+                        </>
+                      ) : null}
+                    </View>
+                    <Text numberOfLines={2} style={styles.featuredSynopsis}>
+                      {featured.synopsis}
                     </Text>
+                    <View style={styles.featuredActions}>
+                      <View style={styles.playPill}>
+                        <PlayIcon size={14} color={colors.background} />
+                        <Text style={styles.playPillText}>Play</Text>
+                      </View>
+                      <View style={styles.miniList}>
+                        <Text style={styles.miniListText}>Details</Text>
+                      </View>
+                    </View>
                   </View>
-                  <ChevronRightIcon size={18} color={colors.textMuted} />
                 </Pressable>
-              ))}
-            </View>
+              </>
+            ) : null}
+
+            {explore.length ? (
+              <>
+                <SectionHeader title="Explore Titles" compact />
+                <View style={styles.becauseWrap}>
+                  {explore.map(m => (
+                    <Pressable
+                      key={m.id}
+                      onPress={() => openMovie(m.id)}
+                      style={styles.becauseRow}>
+                      <Image
+                        source={{uri: m.backdrop || m.poster}}
+                        style={styles.becauseImg}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.becauseBody}>
+                        <Text style={styles.becauseTitle}>{m.title}</Text>
+                        <Text style={styles.becauseMeta}>
+                          {[m.year, m.genres[0], m.maturity]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </Text>
+                      </View>
+                      <ChevronRightIcon size={18} color={colors.textMuted} />
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            ) : null}
           </>
-        ) : null}
+        )}
       </ScrollView>
     </View>
   );
@@ -660,7 +661,7 @@ const styles = StyleSheet.create({
   featured: {
     marginHorizontal: spacing.md,
     marginTop: spacing.sm,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
     borderRadius: radius.lg,
     overflow: 'hidden',
     height: 260,

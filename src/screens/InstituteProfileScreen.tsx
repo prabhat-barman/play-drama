@@ -1,7 +1,6 @@
 import React, {useCallback} from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Image,
   Pressable,
   ScrollView,
@@ -14,7 +13,6 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {colors, radius, spacing} from '../theme/colors';
 import {
   ChevronLeftIcon,
-  ChevronRightIcon,
   UserIcon,
 } from '../components/icons';
 import {api, type Student, type Webseries} from '../lib/api';
@@ -36,7 +34,7 @@ type InstituteBundle = {
 
 export function InstituteProfileScreen({navigation, route}: Props) {
   const {token} = useAuth();
-  const {studentId} = route.params || {};
+  const {id, instituteId, studentId} = route.params || {};
 
   const fetchInstituteData = useCallback(
     async (signal: AbortSignal): Promise<InstituteBundle> => {
@@ -44,43 +42,81 @@ export function InstituteProfileScreen({navigation, route}: Props) {
         throw new Error('Not authenticated');
       }
 
+      let instId = id || instituteId;
       let instName = 'Drama & Film Institute';
       let instLogo: string | undefined;
+      let instDesc = 'Premier performing arts and film production institute training the next generation of actors, directors, and creators.';
+      let students: Student[] = [];
+      let series: Webseries[] = [];
 
-      if (studentId) {
+      if (!instId && studentId) {
         try {
           const detail = await api.students.get({token, id: studentId, signal});
+          instId = detail.institute?._id || detail.institute?.id;
           if (detail.institute?.name) instName = detail.institute.name;
           if (detail.institute?.logo) instLogo = detail.institute.logo;
-        } catch {
-          // ignore
+        } catch (e) {
+          console.warn('Failed to resolve student institute ID', e);
         }
       }
 
-      const [studentsRes, seriesRes] = await Promise.allSettled([
-        api.students.list({token, limit: 12, signal}),
-        api.webseries.list({token, status: 'PUBLISHED', limit: 10, signal}),
-      ]);
+      if (instId) {
+        try {
+          const detail = await api.institutes.get({token, id: instId, signal});
+          if (detail) {
+            instName = detail.name || instName;
+            instLogo = detail.logoUrl || detail.logo || instLogo;
+            instDesc = detail.description || instDesc;
+          }
+        } catch (e) {
+          console.warn('Failed to fetch institute detail', e);
+        }
 
-      const students =
-        studentsRes.status === 'fulfilled' ? studentsRes.value.data : [];
-      const series =
-        seriesRes.status === 'fulfilled' ? seriesRes.value.data : [];
+        try {
+          const studentsRes = await api.institutes.listStudents({token, id: instId, limit: 12, signal});
+          students = studentsRes.data || [];
+        } catch (e) {
+          console.warn('Failed to fetch institute students', e);
+          try {
+            const fallback = await api.students.list({token, limit: 12, signal});
+            students = fallback.data || [];
+          } catch {}
+        }
+
+        try {
+          const seriesRes = await api.institutes.listWebseries({token, id: instId, status: 'PUBLISHED', limit: 10, signal});
+          series = seriesRes.data || [];
+        } catch (e) {
+          console.warn('Failed to fetch institute webseries', e);
+          try {
+            const fallback = await api.webseries.list({token, status: 'PUBLISHED', limit: 10, signal});
+            series = fallback.data || [];
+          } catch {}
+        }
+      } else {
+        const [studentsRes, seriesRes] = await Promise.allSettled([
+          api.students.list({token, limit: 12, signal}),
+          api.webseries.list({token, status: 'PUBLISHED', limit: 10, signal}),
+        ]);
+        students = studentsRes.status === 'fulfilled' ? studentsRes.value.data : [];
+        series = seriesRes.status === 'fulfilled' ? seriesRes.value.data : [];
+      }
 
       return {
         name: instName,
         logo: instLogo,
-        description:
-          'Premier performing arts and film production institute training the next generation of actors, directors, and creators.',
+        description: instDesc,
         students,
         series,
       };
     },
-    [token, studentId],
+    [token, id, instituteId, studentId],
   );
 
   const {data, loading, error, reload} = useApi(fetchInstituteData, [
     token,
+    id,
+    instituteId,
     studentId,
   ]);
 

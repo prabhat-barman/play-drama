@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -174,6 +173,18 @@ export function StudentProfileScreen({navigation}: Props) {
               })
             }
           />
+          {user?.instituteId ? (
+            <Row
+              icon={<UserIcon size={18} color={colors.brand} />}
+              label="View My Institute Profile"
+              hint="See your institute profile page"
+              onPress={() =>
+                navigation.navigate('InstituteProfile', {
+                  instituteId: user.instituteId,
+                })
+              }
+            />
+          ) : null}
           <Row
             icon={<UserIcon size={18} color={colors.textPrimary} />}
             label="Edit Profile"
