@@ -138,12 +138,21 @@ export function PlayerScreen({navigation, route}: Props) {
 
   const [current, setCurrent] = useState(0);
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
+  const [trackWidth, setTrackWidth] = useState(0);
 
   const totalSec = videoDuration !== null
     ? videoDuration
     : (data?.firstEpisode?.duration && data.firstEpisode.duration > 0
       ? data.firstEpisode.duration
       : DEFAULT_TOTAL_SEC);
+
+  const handleTouch = (evt: any) => {
+    if (trackWidth <= 0 || totalSec <= 0) return;
+    const touchX = evt.nativeEvent.locationX;
+    const newProgress = Math.min(1, Math.max(0, touchX / trackWidth));
+    const newTime = newProgress * totalSec;
+    handleSeek(newTime);
+  };
   const [playing, setPlaying] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const fade = useRef(new Animated.Value(1)).current;
@@ -176,6 +185,15 @@ export function PlayerScreen({navigation, route}: Props) {
   const handlePrevEpisode = () => {
     if (hasPrevEp) {
       handleSelectEpisode(episodes[currentEpIndex - 1]);
+    }
+  };
+
+  const handleVideoEnd = () => {
+    if (hasNextEp) {
+      handleNextEpisode();
+    } else {
+      setPlaying(false);
+      setShowControls(true);
     }
   };
 
@@ -224,12 +242,12 @@ export function PlayerScreen({navigation, route}: Props) {
   }, [showControls, fade]);
 
   useEffect(() => {
-    if (!showControls) {
+    if (!showControls || !playing) {
       return;
     }
     const t = setTimeout(() => setShowControls(false), 4500);
     return () => clearTimeout(t);
-  }, [showControls, current]);
+  }, [showControls, playing]);
 
   if (loading && !data) {
     return (
@@ -292,7 +310,7 @@ export function PlayerScreen({navigation, route}: Props) {
             paused={!playing}
             volume={1.0}
             onProgress={e => setCurrent(e.currentTime)}
-            onEnd={() => setPlaying(false)}
+            onEnd={handleVideoEnd}
             onLoadStart={() => {
               setIsVideoLoading(true);
               setVideoError(null);
@@ -456,9 +474,16 @@ export function PlayerScreen({navigation, route}: Props) {
         <SafeAreaView edges={['bottom']} style={styles.bottomBar}>
           <View style={styles.progressRow}>
             <Text style={styles.time}>{formatTime(current)}</Text>
-            <View style={styles.track}>
-              <View style={[styles.trackFill, {width: `${progress * 100}%`}]} />
+            <View
+              style={styles.track}
+              onLayout={e => setTrackWidth(e.nativeEvent.layout.width)}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+              onResponderGrant={handleTouch}
+              onResponderMove={handleTouch}>
+              <View pointerEvents="none" style={[styles.trackFill, {width: `${progress * 100}%`}]} />
               <View
+                pointerEvents="none"
                 style={[
                   styles.thumb,
                   {left: `${Math.min(progress * 100, 99)}%`},
